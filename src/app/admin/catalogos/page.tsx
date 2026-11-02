@@ -6,6 +6,8 @@ import { useConfig } from "@/hooks/useConfig";
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+export const dynamic = 'force-dynamic';
+
 export default function AdminCatalogos() {
   const [catalogoActivo, setCatalogoActivo] = useState<"especialidades" | "seguros" | "estados">("especialidades");
   const [nuevoItem, setNuevoItem] = useState("");
