@@ -37,9 +37,8 @@ export default function AyudaPublicaPage() {
   };
 
   // Filtrar FAQ por búsqueda (con validación robusta)
-  const faqFiltrado = faqData
-    .filter((cat: any) => cat && cat.preguntas && Array.isArray(cat.preguntas))
-    .map((cat: any) => ({
+  const faqFiltrado = (faqData || [])
+    .filter((cat: any) => cat && cat.preguntas && Array.isArray(cat.preguntas))    .map((cat: any) => ({
       ...cat,
       preguntas: cat.preguntas
         .filter((p: any) => p && p.pregunta && p.respuesta)
