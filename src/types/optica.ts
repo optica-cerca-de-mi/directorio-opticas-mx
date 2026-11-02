@@ -35,7 +35,6 @@ export interface Optica {
   nombre: string;
   direccion: string;
   ciudad: string;
-  estado: string;
   telefono: string;
   whatsapp?: string;
   horarios: Horario[];

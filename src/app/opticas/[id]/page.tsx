@@ -646,17 +646,17 @@ export default function FichaOptica() {
                   })}
                   
                   {/* Video subido directamente a Cloudinary */}
-{/* Video subido directamente a Cloudinary */}
-{optica.videoCloudinary && (
-  <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
-    <video 
-      src={optica.videoCloudinary.url} 
-      controls 
-      className="w-full h-full"
-      poster={optica.fotos?.[0]?.url}
-    />
-  </div>
-)}
+                  {/* Video subido directamente a Cloudinary */}
+                  {optica.videoCloudinary && typeof optica.videoCloudinary === 'object' && 'url' in optica.videoCloudinary && (
+                    <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
+                      <video 
+                        src={optica.videoCloudinary.url} 
+                        controls 
+                        className="w-full h-full"
+                        poster={optica.fotos?.[0]?.url}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

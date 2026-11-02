@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'opticas',
-          resource_type: resourceType,
+          resource_type: (resourceType as "image" | "video" | "raw" | "auto") || "image",
           ...(resourceType === 'video' ? {
             transformation: [
               { quality: 'auto:good' },
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
             console.error('❌ Error de Cloudinary:', error);
             reject(error);
           } else {
-            console.log('✅ Subida exitosa:', result.public_id);
+            console.log('✅ Subida exitosa:', result?.public_id);
             resolve(result);
           }
         }
@@ -79,12 +79,16 @@ export async function POST(request: NextRequest) {
       uploadStream.end(buffer);
     });
 
+    if (!result || !result.secure_url) {
+      throw new Error("Fallo en la subida a Cloudinary: No se recibió URL");
+    }
+
     return NextResponse.json({
       success: true,
       url: result.secure_url,
       publicId: result.public_id,
       resourceType: result.resource_type,
-      duration: result.duration || null, // Solo para videos
+      duration: result.duration || null,
     });
   } catch (error) {
     console.error('❌ Error uploading:', error);

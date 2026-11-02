@@ -87,7 +87,7 @@ const handleRemove = () => {
       {value?.url ? (
         <div className="relative">
           <video 
-            src={value} 
+            src={typeof value === 'string' ? value : value?.url} 
             controls 
             className="w-full max-h-64 rounded-lg border border-gray-200"
           />
