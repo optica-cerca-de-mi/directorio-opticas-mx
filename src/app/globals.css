@@ -1,0 +1,313 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-50: #EEF4FB;
+  --color-navy-100: #D6E4F5;
+  --color-navy-200: #A9C7E8;
+  --color-navy-300: #7CAADA;
+  --color-navy-400: #4A85C7;
+  --color-navy-500: #2563A8;
+  --color-navy-600: #1E4A7F;
+  --color-navy-700: #1A365D;
+  --color-navy-800: #0F2544;
+  --color-navy-900: #0A1833;
+  --color-navy-950: #050E1F;
+
+  --color-cyan-100: #CFFAFE;
+  --color-cyan-400: #22D3EE;
+  --color-cyan-500: #06B6D4;
+  --color-cyan-600: #0891B2;
+
+  --color-gold-50: #FDFBF5;
+  --color-gold-100: #F5ECD7;
+  --color-gold-300: #D4B872;
+  --color-gold-400: #C9A961;
+  --color-gold-500: #B8935A;
+  --color-gold-700: #8B6F2F;
+
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1F2937;
+  --color-gray-900: #111827;
+
+  --font-display: "Cormorant Garamond", serif;
+  --font-sans: "Montserrat", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-premium: 12px;
+  --radius-premium-lg: 16px;
+
+  --shadow-premium: 0 4px 20px rgba(10, 24, 51, 0.08);
+  --shadow-premium-lg: 0 10px 40px rgba(10, 24, 51, 0.12);
+  --shadow-premium-xl: 0 20px 60px rgba(10, 24, 51, 0.16);
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 17px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-900);
+    font-weight: 500;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    font-weight: 500;
+    line-height: 1.7;
+  }
+
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    font-weight: 600;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-cyan-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .container-premium {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    max-width: 80rem;
+  }
+
+  @media (min-width: 768px) {
+    .container-premium {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  .card-premium {
+    background-color: white;
+    border-radius: var(--radius-premium);
+    box-shadow: var(--shadow-premium);
+    border: 1px solid var(--color-gray-100);
+    transition: all 0.3s ease;
+  }
+
+  .card-premium:hover {
+    box-shadow: var(--shadow-premium-lg);
+    transform: translateY(-2px);
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-navy-700);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-premium);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--color-navy-600);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: white;
+    color: var(--color-navy-700);
+    border: 1px solid var(--color-gray-300);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-premium);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-gray-50);
+    border-color: var(--color-navy-400);
+  }
+
+  .badge-premium {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: var(--color-navy-100);
+    color: var(--color-navy-700);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-premium-plus {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: linear-gradient(to right, var(--color-gold-500), var(--color-gold-400));
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* TipTap Editor Styles */
+.tiptap {
+  outline: none;
+  min-height: 200px;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap li {
+  margin: 0.5rem 0;
+}
+
+.tiptap h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1.5rem 0 1rem;
+}
+
+.tiptap h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.tiptap h1,
+.tiptap h2 {
+  color: #1e3a8a;
+}
+
+/* TipTap Editor Styles */
+.tiptap {
+  outline: none;
+  min-height: 200px;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+  margin: 1rem 0;
+}
+
+.tiptap ul {
+  list-style-type: disc;
+}
+
+.tiptap ol {
+  list-style-type: decimal;
+}
+
+.tiptap li {
+  margin: 0.5rem 0;
+}
+
+.tiptap h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1.5rem 0 1rem;
+  color: #1e3a8a;
+}
+
+.tiptap h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 1.25rem 0 0.75rem;
+  color: #1e3a8a;
+}
+
+/* Alineación de texto */
+.tiptap p[style*="text-align: center"],
+.tiptap h1[style*="text-align: center"],
+.tiptap h2[style*="text-align: center"] {
+  text-align: center;
+}
+
+.tiptap p[style*="text-align: right"],
+.tiptap h1[style*="text-align: right"],
+.tiptap h2[style*="text-align: right"] {
+  text-align: right;
+}
+
+.tiptap p[style*="text-align: left"],
+.tiptap h1[style*="text-align: left"],
+.tiptap h2[style*="text-align: left"] {
+  text-align: left;
+}
