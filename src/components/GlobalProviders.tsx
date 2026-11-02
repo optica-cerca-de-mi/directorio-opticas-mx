@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react"; // ✅ 1. AGREGAMOS ESTE IMPORT
 import { AuthProvider } from "@/lib/auth-context";
 import Header from "@/components/layout/Header";
 import CookieConsent from "@/components/CookieConsent";
@@ -39,16 +40,10 @@ export default function GlobalProviders({ children }: { children: React.ReactNod
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
-              <a
-                href="/terminos"
-                className="hover:text-white transition-colors"
-              >
+              <a href="/terminos" className="hover:text-white transition-colors">
                 Términos y condiciones
               </a>
-              <a
-                href="/privacidad"
-                className="hover:text-white transition-colors"
-              >
+              <a href="/privacidad" className="hover:text-white transition-colors">
                 Aviso de privacidad
               </a>
               <button
@@ -77,9 +72,11 @@ export default function GlobalProviders({ children }: { children: React.ReactNod
         </div>
       </footer>
 
-      {/* Componentes de Cookies y Ubicación */}
-      <CookieConsent />
-      <LocationConsent />
+      {/* ✅ 2. ENVOLVEMOS ESTOS COMPONENTES EN SUSPENSE */}
+      <Suspense fallback={null}>
+        <CookieConsent />
+        <LocationConsent />
+      </Suspense>
     </AuthProvider>
   );
 }
