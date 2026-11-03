@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/lib/auth-context";
+import CheckoutButton from "@/components/CheckoutButton";
 import {
   Crown,
   Star,
@@ -120,6 +122,7 @@ const labelsCaracteristicas: Record<string, string> = {
 export default function PlanPage() {
   const params = useParams();
   const opticaId = params.opticaId as string;
+  const { user } = useAuth();
 
   const [cargando, setCargando] = useState(true);
   const [actualizando, setActualizando] = useState(false);
@@ -171,38 +174,80 @@ export default function PlanPage() {
   };
 
   const cambiarPlan = async (nuevoPlan: string, billingCycle: string) => {
-    setActualizando(true);
-    setMensaje("");
-    setError("");
+    // Si el plan es gratuito, actualizar directamente en Firestore
+    if (nuevoPlan === "free") {
+      setActualizando(true);
+      setMensaje("");
+      setError("");
 
-    try {
-      const fechaVencimiento = calcularFechaVencimiento(billingCycle);
+      try {
+        const docRef = doc(db, "opticas", opticaId);
+        await setDoc(
+          docRef,
+          {
+            plan: nuevoPlan,
+            billingCycle: billingCycle,
+            fechaVencimiento: "",
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
 
-      const docRef = doc(db, "opticas", opticaId);
-      await setDoc(
-        docRef,
-        {
+        setOpticaData({
+          ...opticaData,
           plan: nuevoPlan,
           billingCycle: billingCycle,
-          fechaVencimiento: fechaVencimiento,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+          fechaVencimiento: "",
+        });
 
-      setOpticaData({
-        ...opticaData,
-        plan: nuevoPlan,
-        billingCycle: billingCycle,
-        fechaVencimiento: fechaVencimiento,
-      });
+        setMensaje("Plan actualizado correctamente. Los cambios se reflejarán de inmediato.");
+      } catch (err) {
+        console.error("Error al actualizar:", err);
+        setError("Error al actualizar el plan. Intenta de nuevo.");
+      } finally {
+        setActualizando(false);
+      }
+      return;
+    }
 
-      setMensaje("Plan actualizado correctamente. Los cambios se reflejarán de inmediato.");
-    } catch (err) {
-      console.error("Error al actualizar:", err);
-      setError("Error al actualizar el plan. Intenta de nuevo.");
-    } finally {
-      setActualizando(false);
+    // Si el plan es premium o premium_plus, redirigir al checkout de Stripe
+    if (nuevoPlan === "premium" || nuevoPlan === "premium_plus") {
+      if (!user || !user.email) {
+        setError("Debes iniciar sesión para contratar un plan de pago.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/checkout/stripe", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            plan: nuevoPlan,
+            opticaId: opticaId,
+            userEmail: user.email,
+            userId: user.uid,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Error al crear la sesión de pago");
+        }
+
+        // Redirigir al usuario a la página de pago de Stripe
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error("No se recibió la URL de checkout");
+        }
+      } catch (error: any) {
+        console.error("Error en checkout:", error);
+        setError(`Error: ${error.message}`);
+      }
+      return;
     }
   };
 
@@ -493,16 +538,25 @@ export default function PlanPage() {
                               }`}
                             >
                               {esMejorPlan && valor === false ? (
-                                <button
-                                  onClick={() => {
-                                    setPlanSeleccionado(plan.id);
-                                    cambiarPlan(plan.id, opticaData.billingCycle);
-                                  }}
-                                  disabled={actualizando}
-                                  className="text-xs text-navy-700 hover:text-navy-900 font-medium transition-colors disabled:opacity-50"
-                                >
-                                  Mejorar plan
-                                </button>
+                                plan.id === "free" ? (
+                                  <button
+                                    onClick={() => {
+                                      setPlanSeleccionado(plan.id);
+                                      cambiarPlan(plan.id, opticaData.billingCycle);
+                                    }}
+                                    disabled={actualizando}
+                                    className="text-xs text-navy-700 hover:text-navy-900 font-medium transition-colors disabled:opacity-50"
+                                  >
+                                    Cambiar a Gratis
+                                  </button>
+                                ) : (
+                                  <CheckoutButton
+                                    plan={plan.id as "premium" | "premium-plus"}
+                                    opticaId={opticaId}
+                                    userEmail={user?.email || ""}
+                                    userId={user?.uid || ""}
+                                  />
+                                )
                               ) : (
                                 contenido
                               )}
@@ -589,20 +643,14 @@ export default function PlanPage() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => cambiarPlan("premium_plus", opticaData.billingCycle)}
-                  disabled={actualizando}
-                  className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-semibold text-sm transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap shadow-lg"
-                >
-                  {actualizando ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      Mejorar a Premium+
-                      <ArrowUpRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
+                <div className="w-full md:w-auto">
+                  <CheckoutButton
+                    plan="premium-plus"
+                    opticaId={opticaId}
+                    userEmail={user?.email || ""}
+                    userId={user?.uid || ""}
+                  />
+                </div>
               </div>
             </div>
           )}
