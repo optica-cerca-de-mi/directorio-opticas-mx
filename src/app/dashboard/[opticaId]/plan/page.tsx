@@ -653,18 +653,49 @@ export default function PlanPage() {
                     </span>
                   </div>
                 </div>
-                <div className="w-full md:w-auto">
-                  <CheckoutButton
-                    plan="premium-plus"
-                    opticaId={opticaId}
-                    userEmail={user?.email || ""}
-                    userId={user?.uid || ""}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+<div className="w-full md:w-auto">
+  {user && user.email ? (
+    <CheckoutButton
+      plan="premium-plus"
+      opticaId={opticaId}
+      userEmail={user.email}
+      userId={user.uid}
+    />
+  ) : (
+    <button
+      onClick={async () => {
+        // Obtener usuario directamente de Firebase
+        const { auth } = await import('@/lib/firebase');
+        const currentUser = auth.currentUser;
+        
+        if (currentUser && currentUser.email) {
+          // Intentar de nuevo con los datos directos
+          const response = await fetch("/api/checkout/stripe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              plan: "premium-plus",
+              opticaId: opticaId,
+              userEmail: currentUser.email,
+              userId: currentUser.uid,
+            }),
+          });
+          
+          const data = await response.json();
+          if (data.url) {
+            window.location.href = data.url;
+          }
+        } else {
+          alert("Error: No se pudo obtener la información del usuario. Por favor, cierra sesión e inicia de nuevo.");
+        }
+      }}
+      className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
+    >
+      <CreditCard className="w-5 h-5" />
+      Contratar Plan Premium+ ($599 MXN)
+    </button>
+  )}
+</div>
 
         {/* Panel de vista previa */}
         <div className="lg:col-span-1">
