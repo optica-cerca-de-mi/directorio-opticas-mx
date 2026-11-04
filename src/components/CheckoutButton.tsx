@@ -13,10 +13,8 @@ interface CheckoutButtonProps {
 
 export default function CheckoutButton({ plan, opticaId, userEmail, userId }: CheckoutButtonProps) {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   const handleCheckout = async () => {
-    // DEBUG: Ver qué props estamos recibiendo
     console.log('=== DEBUG CheckoutButton ===');
     console.log('plan:', plan);
     console.log('opticaId:', opticaId);
@@ -24,9 +22,8 @@ export default function CheckoutButton({ plan, opticaId, userEmail, userId }: Ch
     console.log('userId:', userId);
     console.log('============================');
 
-    // Validar que tengamos todos los datos necesarios
     if (!plan || !opticaId || !userEmail || !userId) {
-      alert("Error: Faltan datos del usuario o la óptica. Por favor, recarga la página e intenta de nuevo.");
+      alert("Error: Faltan datos del usuario o la óptica. Recarga la página.");
       return;
     }
 
@@ -35,15 +32,8 @@ export default function CheckoutButton({ plan, opticaId, userEmail, userId }: Ch
     try {
       const response = await fetch("/api/checkout/stripe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          plan,
-          opticaId,
-          userEmail,
-          userId,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, opticaId, userEmail, userId }),
       });
 
       const data = await response.json();
@@ -52,7 +42,6 @@ export default function CheckoutButton({ plan, opticaId, userEmail, userId }: Ch
         throw new Error(data.error || "Error al crear la sesión de pago");
       }
 
-      // Redirigir al usuario a la página de pago de Stripe
       if (data.url) {
         window.location.href = data.url;
       } else {
