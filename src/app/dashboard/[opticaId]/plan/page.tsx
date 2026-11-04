@@ -174,17 +174,6 @@ export default function PlanPage() {
   };
 
   const cambiarPlan = async (nuevoPlan: string, billingCycle: string) => {
-  // DEBUG: Ver qué datos estamos recibiendo
-  console.log('=== DEBUG cambiarPlan ===');
-  console.log('nuevoPlan:', nuevoPlan);
-  console.log('billingCycle:', billingCycle);
-  console.log('opticaId:', opticaId);
-  console.log('user:', user);
-  console.log('user?.email:', user?.email);
-  console.log('user?.uid:', user?.uid);
-  console.log('========================');
-
-    // Si el plan es gratuito, actualizar directamente en Firestore
     if (nuevoPlan === "free") {
       setActualizando(true);
       setMensaje("");
@@ -220,7 +209,6 @@ export default function PlanPage() {
       return;
     }
 
-    // Si el plan es premium o premium_plus, redirigir al checkout de Stripe
     if (nuevoPlan === "premium" || nuevoPlan === "premium_plus") {
       if (!user || !user.email) {
         setError("Debes iniciar sesión para contratar un plan de pago.");
@@ -230,9 +218,7 @@ export default function PlanPage() {
       try {
         const response = await fetch("/api/checkout/stripe", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             plan: nuevoPlan,
             opticaId: opticaId,
@@ -247,7 +233,6 @@ export default function PlanPage() {
           throw new Error(data.error || "Error al crear la sesión de pago");
         }
 
-        // Redirigir al usuario a la página de pago de Stripe
         if (data.url) {
           window.location.href = data.url;
         } else {
@@ -297,7 +282,6 @@ export default function PlanPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-navy-900 font-display mb-2">
           Plan y facturación
@@ -307,7 +291,6 @@ export default function PlanPage() {
         </p>
       </div>
 
-      {/* Mensajes */}
       {mensaje && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -322,7 +305,6 @@ export default function PlanPage() {
         </div>
       )}
 
-      {/* Banner de ahorro anual */}
       {opticaData.billingCycle === "monthly" && opticaData.plan !== "free" && (
         <div className="mb-6 p-4 bg-navy-50 border border-navy-200 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -349,9 +331,7 @@ export default function PlanPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna principal */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Plan actual */}
           <div className="card-premium p-6 border-2 border-navy-200">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -406,7 +386,6 @@ export default function PlanPage() {
               </div>
             )}
 
-            {/* Características del plan actual */}
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-3">
                 Incluye en tu plan:
@@ -433,7 +412,6 @@ export default function PlanPage() {
               </div>
             </div>
 
-            {/* Botones para cambiar ciclo de facturación */}
             <div className="mt-6 pt-4 border-t border-gray-200">
               <p className="text-sm font-semibold text-gray-700 mb-3">
                 Cambiar ciclo de facturación:
@@ -465,7 +443,6 @@ export default function PlanPage() {
             </div>
           </div>
 
-          {/* Tabla comparativa de planes */}
           <div>
             <h2 className="text-2xl font-bold text-navy-900 font-display mb-2">
               Comparar planes
@@ -521,32 +498,17 @@ export default function PlanPage() {
 
                           let contenido;
                           if (key === "fotos") {
-                            contenido = (
-                              <span className="text-sm font-medium text-gray-900">
-                                {valor} fotos
-                              </span>
-                            );
+                            contenido = <span className="text-sm font-medium text-gray-900">{valor} fotos</span>;
                           } else if (key === "soporte") {
-                            contenido = (
-                              <span className="text-sm text-gray-700">{valor}</span>
-                            );
+                            contenido = <span className="text-sm text-gray-700">{valor}</span>;
                           } else if (valor === true) {
-                            contenido = (
-                              <Check className="w-5 h-5 text-green-600 mx-auto" />
-                            );
+                            contenido = <Check className="w-5 h-5 text-green-600 mx-auto" />;
                           } else {
-                            contenido = (
-                              <X className="w-5 h-5 text-gray-300 mx-auto" />
-                            );
+                            contenido = <X className="w-5 h-5 text-gray-300 mx-auto" />;
                           }
 
                           return (
-                            <td
-                              key={plan.id}
-                              className={`p-4 text-center ${
-                                esPlanActual ? "bg-navy-50" : ""
-                              }`}
-                            >
+                            <td key={plan.id} className={`p-4 text-center ${esPlanActual ? "bg-navy-50" : ""}`}>
                               {esMejorPlan && valor === false ? (
                                 plan.id === "free" ? (
                                   <button
@@ -559,13 +521,15 @@ export default function PlanPage() {
                                   >
                                     Cambiar a Gratis
                                   </button>
-                                ) : (
+                                ) : user ? (
                                   <CheckoutButton
                                     plan={plan.id as "premium" | "premium-plus"}
                                     opticaId={opticaId}
-                                    userEmail={user?.email || ""}
-                                    userId={user?.uid || ""}
+                                    userEmail={user.email || ""}
+                                    userId={user.uid || ""}
                                   />
+                                ) : (
+                                  <span className="text-xs text-gray-400">Cargando...</span>
                                 )
                               ) : (
                                 contenido
@@ -581,9 +545,7 @@ export default function PlanPage() {
             </div>
           </div>
 
-          {/* Garantía y testimonio */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Garantía */}
             <div className="card-premium p-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -600,7 +562,6 @@ export default function PlanPage() {
               </div>
             </div>
 
-            {/* Testimonio */}
             <div className="card-premium p-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-gold-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -621,7 +582,6 @@ export default function PlanPage() {
             </div>
           </div>
 
-          {/* CTA de mejora */}
           {opticaData.plan !== "premium_plus" && (
             <div className="card-premium p-6 bg-gradient-to-br from-gold-50 to-gold-100 border-2 border-gold-300">
               <div className="flex items-start justify-between gap-6">
@@ -653,51 +613,26 @@ export default function PlanPage() {
                     </span>
                   </div>
                 </div>
-<div className="w-full md:w-auto">
-  {user && user.email ? (
-    <CheckoutButton
-      plan="premium-plus"
-      opticaId={opticaId}
-      userEmail={user.email}
-      userId={user.uid}
-    />
-  ) : (
-    <button
-      onClick={async () => {
-        // Obtener usuario directamente de Firebase
-        const { auth } = await import('@/lib/firebase');
-        const currentUser = auth.currentUser;
-        
-        if (currentUser && currentUser.email) {
-          // Intentar de nuevo con los datos directos
-          const response = await fetch("/api/checkout/stripe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              plan: "premium-plus",
-              opticaId: opticaId,
-              userEmail: currentUser.email,
-              userId: currentUser.uid,
-            }),
-          });
-          
-          const data = await response.json();
-          if (data.url) {
-            window.location.href = data.url;
-          }
-        } else {
-          alert("Error: No se pudo obtener la información del usuario. Por favor, cierra sesión e inicia de nuevo.");
-        }
-      }}
-      className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
-    >
-      <CreditCard className="w-5 h-5" />
-      Contratar Plan Premium+ ($599 MXN)
-    </button>
-  )}
-</div>
+                <div className="w-full md:w-auto">
+                  {user ? (
+                    <CheckoutButton
+                      plan="premium-plus"
+                      opticaId={opticaId}
+                      userEmail={user.email || ""}
+                      userId={user.uid || ""}
+                    />
+                  ) : (
+                    <button disabled className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-gray-300 text-gray-600 font-semibold rounded-lg cursor-not-allowed">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Cargando usuario...
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
-        {/* Panel de vista previa */}
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             <div className="card-premium p-6">
@@ -715,7 +650,6 @@ export default function PlanPage() {
               )}
 
               <div className="space-y-4">
-                {/* Badge de verificado */}
                 {planParaVistaPrevia?.caracteristicas.badgeVerificado && (
                   <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
                     <Award className="w-5 h-5 text-green-700" />
@@ -726,7 +660,6 @@ export default function PlanPage() {
                   </div>
                 )}
 
-                {/* Galería de fotos */}
                 <div>
                   <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
                     <ImageIcon className="w-3 h-3" />
@@ -739,7 +672,6 @@ export default function PlanPage() {
                   </div>
                 </div>
 
-                {/* Video */}
                 {planParaVistaPrevia?.caracteristicas.video && (
                   <div>
                     <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
@@ -752,7 +684,6 @@ export default function PlanPage() {
                   </div>
                 )}
 
-                {/* Reseñas */}
                 {planParaVistaPrevia?.caracteristicas.resenasGoogle && (
                   <div>
                     <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
@@ -783,7 +714,6 @@ export default function PlanPage() {
                   </div>
                 )}
 
-                {/* Botones de navegación */}
                 {planParaVistaPrevia?.caracteristicas.botonesNavegacion && (
                   <div>
                     <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
@@ -801,7 +731,6 @@ export default function PlanPage() {
                   </div>
                 )}
 
-                {/* Producto destacado */}
                 {planParaVistaPrevia?.caracteristicas.productoDestacado && (
                   <div>
                     <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
@@ -816,7 +745,6 @@ export default function PlanPage() {
                   </div>
                 )}
 
-                {/* SEO y reportes */}
                 {(planParaVistaPrevia?.caracteristicas.seoOptimizado || planParaVistaPrevia?.caracteristicas.reportesMensuales) && (
                   <div className="pt-3 border-t border-gray-200 space-y-2">
                     {planParaVistaPrevia?.caracteristicas.seoOptimizado && (
