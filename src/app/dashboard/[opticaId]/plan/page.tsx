@@ -174,6 +174,17 @@ export default function PlanPage() {
   };
 
   const cambiarPlan = async (nuevoPlan: string, billingCycle: string) => {
+  const cambiarPlan = async (nuevoPlan: string, billingCycle: string) => {
+  // DEBUG: Ver qué datos estamos recibiendo
+  console.log('=== DEBUG cambiarPlan ===');
+  console.log('nuevoPlan:', nuevoPlan);
+  console.log('billingCycle:', billingCycle);
+  console.log('opticaId:', opticaId);
+  console.log('user:', user);
+  console.log('user?.email:', user?.email);
+  console.log('user?.uid:', user?.uid);
+  console.log('========================');
+
     // Si el plan es gratuito, actualizar directamente en Firestore
     if (nuevoPlan === "free") {
       setActualizando(true);

@@ -17,6 +17,17 @@ export default function CheckoutButton({ plan, opticaId, userEmail, userId }: Ch
   const router = useRouter();
 
   const handleCheckout = async () => {
+  // DEBUG: Ver qué props estamos recibiendo
+  console.log('=== DEBUG CheckoutButton ===');
+  console.log('plan:', plan);
+  console.log('opticaId:', opticaId);
+  console.log('userEmail:', userEmail);
+  console.log('userId:', userId);
+  console.log('============================');
+
+  setLoading(true);
+
+  try {
     setLoading(true);
 
     try {
