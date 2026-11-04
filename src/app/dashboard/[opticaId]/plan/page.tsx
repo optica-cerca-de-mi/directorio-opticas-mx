@@ -174,7 +174,6 @@ export default function PlanPage() {
   };
 
   const cambiarPlan = async (nuevoPlan: string, billingCycle: string) => {
-  const cambiarPlan = async (nuevoPlan: string, billingCycle: string) => {
   // DEBUG: Ver qué datos estamos recibiendo
   console.log('=== DEBUG cambiarPlan ===');
   console.log('nuevoPlan:', nuevoPlan);
