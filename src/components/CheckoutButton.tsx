@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context"; // Ajusta la ruta si tu contexto se llama diferente
 import { Loader2, CreditCard } from "lucide-react";
 
 interface CheckoutButtonProps {
@@ -17,16 +16,20 @@ export default function CheckoutButton({ plan, opticaId, userEmail, userId }: Ch
   const router = useRouter();
 
   const handleCheckout = async () => {
-  console.log('=== DEBUG CheckoutButton ===');
-  console.log('plan:', plan);
-  console.log('opticaId:', opticaId);
-  console.log('userEmail:', userEmail);
-  console.log('userId:', userId);
-  console.log('============================');
+    // DEBUG: Ver qué props estamos recibiendo
+    console.log('=== DEBUG CheckoutButton ===');
+    console.log('plan:', plan);
+    console.log('opticaId:', opticaId);
+    console.log('userEmail:', userEmail);
+    console.log('userId:', userId);
+    console.log('============================');
 
-  setLoading(true);
+    // Validar que tengamos todos los datos necesarios
+    if (!plan || !opticaId || !userEmail || !userId) {
+      alert("Error: Faltan datos del usuario o la óptica. Por favor, recarga la página e intenta de nuevo.");
+      return;
+    }
 
-  try {
     setLoading(true);
 
     try {
