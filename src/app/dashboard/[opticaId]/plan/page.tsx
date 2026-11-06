@@ -564,6 +564,7 @@ export default function PlanPage() {
 
             <div className="card-premium p-6">
 {opticaData.plan !== "premium_plus" && (
+// CAMBIO DE PRUEBA - 2026-11-06
   <div className="card-premium p-6 bg-gradient-to-br from-gold-50 to-gold-100 border-2 border-gold-300">
     <div className="flex items-start justify-between gap-6">
       <div className="flex-1">
