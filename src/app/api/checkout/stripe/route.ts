@@ -3,10 +3,8 @@ import stripe from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   try {
-    // Obtener datos del request (el usuario ya está autenticado del lado del cliente)
     const { plan, opticaId, userEmail, userId } = await request.json();
 
-    // Validar datos requeridos
     if (!plan || !opticaId || !userEmail) {
       return NextResponse.json(
         { error: 'plan, opticaId y userEmail son requeridos' },
@@ -14,7 +12,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determinar el priceId según el plan
     const priceId = plan === 'premium' 
       ? process.env.STRIPE_PRICE_PREMIUM
       : process.env.STRIPE_PRICE_PREMIUM_PLUS;
@@ -26,14 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener URL base de la app
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-    // Crear sesión de checkout
     const checkoutSession = await stripe.checkout.sessions.create({
-      mode: 'payment', // Pago único (NO recurrente)
-      payment_method_types: ['card', 'oxxo'], // Tarjeta y OXXO
+      mode: 'payment',
       line_items: [
         {
           price: priceId,
@@ -51,7 +45,6 @@ export async function POST(request: NextRequest) {
       client_reference_id: opticaId,
     });
 
-    // Retornar la URL de checkout
     return NextResponse.json({ 
       url: checkoutSession.url,
       sessionId: checkoutSession.id 
