@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react"; // ✅ Agregar Suspense
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
@@ -22,12 +22,22 @@ function LoginContent() {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+  
+  // ✅ NUEVO ESTADO PARA EL CONSENTIMIENTO LEGAL
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const redirect = searchParams.get("redirect") || "/dashboard";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // ✅ VALIDACIÓN: Si es registro, debe aceptar los términos
+    if (modo === "registro" && !aceptaTerminos) {
+      setError("Debes aceptar los Términos y Condiciones y el Aviso de Privacidad para crear una cuenta.");
+      return; // Detiene la ejecución, no crea la cuenta
+    }
+
     setCargando(true);
 
     try {
@@ -36,10 +46,14 @@ function LoginContent() {
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(userCredential.user, { displayName: nombre });
+        
+        // ✅ Guardamos el consentimiento en la base de datos para auditoría legal
         await setDoc(doc(db, "usuarios", userCredential.user.uid), {
           email,
           nombre,
           fechaRegistro: new Date().toISOString(),
+          aceptaTerminos: true,
+          fechaAceptacionTerminos: new Date().toISOString(),
         });
       }
       router.push(redirect);
@@ -51,7 +65,7 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 flex items-center justify-center px-4 py-8">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-navy-900 mb-2">
@@ -65,8 +79,9 @@ function LoginContent() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-2">
+            <span className="font-bold">⚠️</span>
+            <span>{error}</span>
           </div>
         )}
 
@@ -132,10 +147,46 @@ function LoginContent() {
             </div>
           </div>
 
+          {/* ✅ CHECKBOX DE CONSENTIMIENTO LEGAL (Solo en modo registro) */}
+          {modo === "registro" && (
+            <div className="pt-2">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  required
+                  checked={aceptaTerminos}
+                  onChange={(e) => setAceptaTerminos(e.target.checked)}
+                  className="mt-1 w-4 h-4 text-navy-900 border-gray-300 rounded focus:ring-navy-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-600 leading-snug group-hover:text-gray-800 transition-colors">
+                  He leído y acepto los{" "}
+                  <a 
+                    href="/terminos-y-condiciones" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-navy-700 underline hover:text-navy-900 font-medium"
+                  >
+                    Términos y Condiciones
+                  </a>{" "}
+                  y el{" "}
+                  <a 
+                    href="/aviso-de-privacidad" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-navy-700 underline hover:text-navy-900 font-medium"
+                  >
+                    Aviso de Privacidad
+                  </a>
+                  .
+                </span>
+              </label>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={cargando}
-            className="w-full py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
           >
             {cargando ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -150,6 +201,7 @@ function LoginContent() {
             onClick={() => {
               setModo(modo === "login" ? "registro" : "login");
               setError("");
+              setAceptaTerminos(false); // Resetear el checkbox al cambiar de modo
             }}
             className="text-sm text-navy-700 hover:text-navy-900 font-medium hover:underline"
           >
