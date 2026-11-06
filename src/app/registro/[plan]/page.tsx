@@ -91,7 +91,6 @@ export default function WizardRegistro() {
   const router = useRouter();
   const [publicando, setPublicando] = useState(false);
 
-  // ✅ CORRECCIÓN: Extracción segura con fallback a []
   const { data: especialidadesData, loading: loadingEspecialidades, error: errorEspecialidades } = useConfig("especialidades");
   const especialidadesDisponibles = especialidadesData?.items || [];
 
@@ -154,19 +153,21 @@ export default function WizardRegistro() {
   };
 
   const getPrecioPolizaAnual = () => {
+    const planActual = formData.planSeleccionado;
     if (planActual === "premium") return 990;
     if (planActual === "premium_plus") return 891;
     return 0;
   };
 
   const getMesesGratisPoliza = () => {
+    const planActual = formData.planSeleccionado;
     if (planActual === "premium") return 2;
     if (planActual === "premium_plus") return 3;
     return 0;
   };
 
-  // ✅ NUEVA FUNCIÓN: Procesar archivos (Drag & Drop o Click) de forma no bloqueante
   const procesarArchivos = async (archivos: File[]) => {
+    const esPremiumPlus = formData.planSeleccionado === "premium_plus";
     const maxFotos = esPremiumPlus ? 15 : 8;
     const espaciosDisponibles = maxFotos - formData.fotos.length;
     
@@ -178,7 +179,6 @@ export default function WizardRegistro() {
     const archivosAProcesar = archivos.slice(0, espaciosDisponibles);
 
     for (const archivo of archivosAProcesar) {
-      // Validar tamaño (5MB)
       if (archivo.size > 5 * 1024 * 1024) {
         alert(`El archivo "${archivo.name}" excede el límite de 5MB y fue omitido.`);
         continue;
@@ -199,7 +199,6 @@ export default function WizardRegistro() {
           actualizarCampo("fotos", [...formData.fotos, datos.url]);
         } else {
           console.error(`Error al subir ${archivo.name}:`, datos.error);
-          // No usamos alert() aquí para no interrumpir el flujo si falla una de varias
         }
       } catch (err) {
         console.error(`Error de conexión al subir ${archivo.name}:`, err);
@@ -208,20 +207,30 @@ export default function WizardRegistro() {
   };
 
   const publicarFicha = async () => {
+    // ✅ VALIDACIÓN ABSOLUTA: Si no está marcado, se detiene la ejecución.
+    console.log("Estado de aceptaTerminos al hacer clic:", formData.aceptaTerminos);
+    
     if (!formData.aceptaTerminos) {
-      alert("Para continuar, debes aceptar los Términos y Condiciones y el Aviso de Privacidad.");
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-      return;
+      alert("⚠️ Para continuar, es OBLIGATORIO aceptar los Términos y Condiciones y el Aviso de Privacidad.");
+      
+      // Hace scroll suave hacia el checkbox y lo resalta
+      const checkboxElement = document.getElementById("checkbox-terminos");
+      if (checkboxElement) {
+        checkboxElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        checkboxElement.classList.add("bg-red-50", "ring-2", "ring-red-400");
+        setTimeout(() => {
+          checkboxElement.classList.remove("bg-red-50", "ring-2", "ring-red-400");
+        }, 2000);
+      }
+      return; // DETIENE LA FUNCIÓN AQUÍ. NO CREA LA CUENTA.
     }
 
     setPublicando(true);
 
     try {
-      // Generar credenciales temporales únicas
       const emailTemporal = `${formData.nombre.toLowerCase().replace(/\s+/g, ".")}.${Date.now()}@optica.temp`;
       const passwordTemporal = `Optica${Date.now()}!`;
 
-      // 1. Crear usuario en Firebase Auth (esto SIEMPRE debe ejecutarse)
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         emailTemporal,
@@ -242,7 +251,6 @@ export default function WizardRegistro() {
         polizaVencimiento.setDate(polizaVencimiento.getDate() + diasPoliza);
       }
 
-      // 2. Guardar en Firestore (las fotos pueden estar vacías, no es problema)
       await setDoc(doc(db, "opticas", uid), {
         uid: uid,
         slug: slug,
@@ -259,7 +267,7 @@ export default function WizardRegistro() {
         especialidades: formData.especialidades,
         segurosAceptados: formData.segurosAceptados,
         descripcion: formData.descripcion,
-        fotos: formData.fotos, // Puede ser [] si falló la subida, y está bien.
+        fotos: formData.fotos,
         videoUrl: formData.videoUrl,
         plan: formData.planSeleccionado,
         billingCycle: formData.billingCycle,
@@ -270,6 +278,9 @@ export default function WizardRegistro() {
         fechaVencimiento: fechaVencimiento.toISOString(),
         estado: "activa",
         email: emailTemporal,
+        // ✅ AUDITORÍA LEGAL: Guardamos el consentimiento en la base de datos
+        consentimientoTerminos: true,
+        fechaConsentimiento: serverTimestamp(),
       });
 
       router.push(`/dashboard/${uid}`);
@@ -704,7 +715,7 @@ export default function WizardRegistro() {
                             multiple
                             onChange={(e) => {
                               procesarArchivos(Array.from(e.target.files || []));
-                              e.target.value = ""; // Reset para permitir subir el mismo archivo si se borra
+                              e.target.value = "";
                             }}
                             className="hidden"
                             id="file-input-wizard"
@@ -1123,90 +1134,92 @@ export default function WizardRegistro() {
                       </div>
                     </div>
                   </div>
+
+                  {/* ✅ CHECKBOX DE CONSENTIMIENTO LEGAL OBLIGATORIO */}
+                  <div id="checkbox-terminos" className="mt-6 pt-6 border-t-2 border-gold-200 bg-gold-50/30 p-4 rounded-lg">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={formData.aceptaTerminos}
+                        onChange={(e) => actualizarCampo("aceptaTerminos", e.target.checked)}
+                        className="mt-1 w-5 h-5 text-navy-900 border-gray-400 rounded focus:ring-gold-500 focus:ring-2"
+                      />
+                      <span className="text-sm text-gray-700 leading-snug group-hover:text-gray-900 transition-colors">
+                        He leído y acepto los{" "}
+                        <a 
+                          href="/terminos-y-condiciones" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-gold-700 underline hover:text-gold-900 font-semibold"
+                        >
+                          Términos y Condiciones
+                        </a>{" "}
+                        y el{" "}
+                        <a 
+                          href="/aviso-de-privacidad" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-gold-700 underline hover:text-gold-900 font-semibold"
+                        >
+                          Aviso de Privacidad
+                        </a>
+                        . Consiento el tratamiento de mis datos personales conforme a lo establecido en dicho aviso.
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Navegación del wizard */}
+                  <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+                    {pasoActual > 1 ? (
+                      <button
+                        onClick={pasoAnterior}
+                        className="btn-secondary text-sm gap-2"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Anterior
+                      </button>
+                    ) : (
+                      <div></div>
+                    )}
+
+                    {pasoActual < totalPasos ? (
+                      <button
+                        onClick={siguientePaso}
+                        disabled={!puedeAvanzar()}
+                        className={`btn-primary text-sm gap-2 ${
+                          !puedeAvanzar() ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        Siguiente
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={publicarFicha}
+                        disabled={publicando || !formData.aceptaTerminos}
+                        className={`btn-primary bg-gold-500 hover:bg-gold-400 text-white text-sm gap-2 transition-all ${
+                          publicando || !formData.aceptaTerminos 
+                            ? "opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400" 
+                            : "shadow-lg hover:shadow-xl"
+                        }`}
+                      >
+                        {publicando ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Creando cuenta y publicando...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Publicar mi ficha
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
-
-              {/* ✅ CHECKBOX DE CONSENTIMIENTO LEGAL OBLIGATORIO */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <label className="flex items-start gap-3 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    required
-                    checked={formData.aceptaTerminos}
-                    onChange={(e) => actualizarCampo("aceptaTerminos", e.target.checked)}
-                    className="mt-1 w-4 h-4 text-navy-900 border-gray-300 rounded focus:ring-gold-400 focus:ring-2"
-                  />
-                  <span className="text-sm text-gray-600 leading-snug group-hover:text-gray-800 transition-colors">
-                    He leído y acepto los{" "}
-                    <a 
-                      href="/terminos-y-condiciones" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-gold-700 underline hover:text-gold-800 font-medium"
-                    >
-                      Términos y Condiciones
-                    </a>{" "}
-                    y el{" "}
-                    <a 
-                      href="/aviso-de-privacidad" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-gold-700 underline hover:text-gold-800 font-medium"
-                    >
-                      Aviso de Privacidad
-                    </a>
-                    . Consiento el tratamiento de mis datos personales conforme a lo establecido en dicho aviso.
-                  </span>
-                </label>
-              </div>
-
-              {/* Navegación del wizard */}
-              <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-                {pasoActual > 1 ? (
-                  <button
-                    onClick={pasoAnterior}
-                    className="btn-secondary text-sm gap-2"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Anterior
-                  </button>
-                ) : (
-                  <div></div>
-                )}
-
-                {pasoActual < totalPasos ? (
-                  <button
-                    onClick={siguientePaso}
-                    disabled={!puedeAvanzar()}
-                    className={`btn-primary text-sm gap-2 ${
-                      !puedeAvanzar() ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    Siguiente
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={publicarFicha}
-                    disabled={publicando || !formData.aceptaTerminos}
-                    className={`btn-primary bg-gold-500 hover:bg-gold-400 text-sm gap-2 ${
-                      publicando ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    {publicando ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Creando cuenta y publicando...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Publicar mi ficha
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
             </div>
           </div>
 
