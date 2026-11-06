@@ -563,76 +563,105 @@ export default function PlanPage() {
             </div>
 
             <div className="card-premium p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gold-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Star className="w-6 h-6 text-gold-700" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-700 italic mb-2">
-                    "Desde que cambiamos a Premium+, nuestras visitas aumentaron 3 veces y conseguimos 2 proveedores nuevos para la óptica."
-                  </p>
-                  <p className="text-xs font-semibold text-gray-900">
-                    Óptica Visión Clara, CDMX
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Plan Premium+ desde hace 8 meses
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {opticaData.plan !== "premium_plus" && (
-            <div className="card-premium p-6 bg-gradient-to-br from-gold-50 to-gold-100 border-2 border-gold-300">
-              <div className="flex items-start justify-between gap-6">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Crown className="w-5 h-5 text-gold-700" />
-                    <h3 className="text-lg font-bold text-navy-900 font-display">
-                      Lleva tu óptica al siguiente nivel
-                    </h3>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">
-                    Con Premium+ obtienes 12 fotos, video promocional, badge de verificado, acceso a proveedores calificados, reseñas nativas y gestión de contenido incluida.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
-                      <Check className="w-3 h-3" /> 12 fotos
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
-                      <Check className="w-3 h-3" /> Video
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
-                      <Check className="w-3 h-3" /> Badge verificado
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
-                      <Check className="w-3 h-3" /> Acceso B2B
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
-                      <Check className="w-3 h-3" /> Reseñas nativas
-                    </span>
-                  </div>
-                </div>
-                <div className="w-full md:w-auto">
-                  {user ? (
-                    <CheckoutButton
-                      plan="premium-plus"
-                      opticaId={opticaId}
-                      userEmail={user.email || ""}
-                      userId={user.uid || ""}
-                    />
-                  ) : (
-                    <button disabled className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-gray-300 text-gray-600 font-semibold rounded-lg cursor-not-allowed">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Cargando usuario...
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+{opticaData.plan !== "premium_plus" && (
+  <div className="card-premium p-6 bg-gradient-to-br from-gold-50 to-gold-100 border-2 border-gold-300">
+    <div className="flex items-start justify-between gap-6">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 mb-2">
+          <Crown className="w-5 h-5 text-gold-700" />
+          <h3 className="text-lg font-bold text-navy-900 font-display">
+            Lleva tu óptica al siguiente nivel
+          </h3>
         </div>
+        <p className="text-sm text-gray-700 mb-3">
+          Con Premium+ obtienes 12 fotos, video promocional, badge de verificado, acceso a proveedores calificados, reseñas nativas y gestión de contenido incluida.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
+            <Check className="w-3 h-3" /> 12 fotos
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
+            <Check className="w-3 h-3" /> Video
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
+            <Check className="w-3 h-3" /> Badge verificado
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
+            <Check className="w-3 h-3" /> Acceso B2B
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-white text-navy-700 rounded text-xs font-medium">
+            <Check className="w-3 h-3" /> Reseñas nativas
+          </span>
+        </div>
+      </div>
+      <div className="w-full md:w-auto">
+        <button
+          onClick={async () => {
+            try {
+              // Importar Firebase Auth dinámicamente
+              const { auth } = await import('@/lib/firebase');
+              const currentUser = auth.currentUser;
+              
+              if (!currentUser || !currentUser.email) {
+                alert("Error: No se encontró la información del usuario. Por favor, cierra sesión e inicia de nuevo.");
+                return;
+              }
 
+              // Mostrar loading
+              const btn = document.getElementById('checkout-btn-premium-plus');
+              if (btn) {
+                btn.innerHTML = '<span class="flex items-center gap-2"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...</span>';
+                btn.disabled = true;
+              }
+
+              // Llamar al API de Stripe
+              const response = await fetch("/api/checkout/stripe", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  plan: "premium-plus",
+                  opticaId: opticaId,
+                  userEmail: currentUser.email,
+                  userId: currentUser.uid,
+                }),
+              });
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || "Error al crear la sesión de pago");
+              }
+
+              if (data.url) {
+                window.location.href = data.url;
+              } else {
+                throw new Error("No se recibió la URL de checkout");
+              }
+            } catch (error: any) {
+              console.error("Error en checkout:", error);
+              alert(`Error: ${error.message}`);
+              
+              // Restaurar botón
+              const btn = document.getElementById('checkout-btn-premium-plus');
+              if (btn) {
+                btn.innerHTML = '<span class="flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg> Contratar Plan Premium+ ($599 MXN)</span>';
+                btn.disabled = false;
+              }
+            }
+          }}
+          id="checkout-btn-premium-plus"
+          className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+          Contratar Plan Premium+ ($599 MXN)
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         <div className="lg:col-span-1">
           <div className="sticky top-24">
             <div className="card-premium p-6">
