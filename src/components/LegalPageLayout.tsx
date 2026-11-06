@@ -98,7 +98,7 @@ export default function LegalPageLayout({
             © {new Date().getFullYear()} La Óptica Cerca de mí. Todos los derechos reservados.
           </p>
           <p className="text-xs text-navy-400 mt-2">
-            Operado por Grupo Óptico ALPLA SA de CV
+            Operado por Orange Point
           </p>
         </div>
       </footer>

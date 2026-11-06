@@ -35,7 +35,7 @@ export default function GlobalProviders({ children }: { children: React.ReactNod
                 El directorio #1 de ópticas en México. Conectamos tu negocio con más clientes.
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                © {new Date().getFullYear()} Grupo Óptico ALPLA SA de CV. Todos los derechos reservados.
+                © {new Date().getFullYear()} Orange Point. Todos los derechos reservados.
               </p>
             </div>
 
@@ -95,9 +95,9 @@ export default function GlobalProviders({ children }: { children: React.ReactNod
 
           {/* Línea divisoria inferior */}
           <div className="border-t border-navy-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-            <p>Operado por Grupo Óptico ALPLA SA de CV</p>
+            <p>Operado por Orange Point</p>
             <div className="flex gap-4">
-              <span>Hecho con ❤️ en México</span>
+              <span>Hecho con ❤️ y orgullosamente en México</span>
             </div>
           </div>
         </div>

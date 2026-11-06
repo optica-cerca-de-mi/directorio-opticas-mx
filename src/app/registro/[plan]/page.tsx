@@ -208,6 +208,12 @@ export default function WizardRegistro() {
   };
 
   const publicarFicha = async () => {
+    if (!formData.aceptaTerminos) {
+      alert("Para continuar, debes aceptar los Términos y Condiciones y el Aviso de Privacidad.");
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      return;
+    }
+
     setPublicando(true);
 
     try {
