@@ -47,6 +47,7 @@ interface FormData {
   billingCycle: "monthly" | "yearly";
   aceptaPoliza: boolean;
   polizaBillingCycle: "monthly" | "yearly";
+  aceptaTerminos: boolean;
 }
 
 export default function WizardRegistro() {
@@ -83,6 +84,7 @@ export default function WizardRegistro() {
     billingCycle: "monthly",
     aceptaPoliza: false,
     polizaBillingCycle: "monthly",
+    aceptaTerminos: false,
   });
 
   const totalPasos = 5;
@@ -1118,6 +1120,40 @@ export default function WizardRegistro() {
                 </div>
               )}
 
+              {/* ✅ CHECKBOX DE CONSENTIMIENTO LEGAL OBLIGATORIO */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={formData.aceptaTerminos}
+                    onChange={(e) => actualizarCampo("aceptaTerminos", e.target.checked)}
+                    className="mt-1 w-4 h-4 text-navy-900 border-gray-300 rounded focus:ring-gold-400 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-600 leading-snug group-hover:text-gray-800 transition-colors">
+                    He leído y acepto los{" "}
+                    <a 
+                      href="/terminos-y-condiciones" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-gold-700 underline hover:text-gold-800 font-medium"
+                    >
+                      Términos y Condiciones
+                    </a>{" "}
+                    y el{" "}
+                    <a 
+                      href="/aviso-de-privacidad" 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-gold-700 underline hover:text-gold-800 font-medium"
+                    >
+                      Aviso de Privacidad
+                    </a>
+                    . Consiento el tratamiento de mis datos personales conforme a lo establecido en dicho aviso.
+                  </span>
+                </label>
+              </div>
+
               {/* Navegación del wizard */}
               <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
                 {pasoActual > 1 ? (
@@ -1146,7 +1182,7 @@ export default function WizardRegistro() {
                 ) : (
                   <button
                     onClick={publicarFicha}
-                    disabled={publicando}
+                    disabled={publicando || !formData.aceptaTerminos}
                     className={`btn-primary bg-gold-500 hover:bg-gold-400 text-sm gap-2 ${
                       publicando ? "opacity-50 cursor-not-allowed" : ""
                     }`}
