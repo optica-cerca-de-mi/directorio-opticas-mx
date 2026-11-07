@@ -7,7 +7,7 @@ import {
   TrendingUp, Clock, Search, Eye, MessageCircle,
   Phone, ChevronRight, Award, Heart, Users,
   CheckCircle2, ArrowRight, Zap, Target, Eye as EyeIcon,
-  Building2, Globe
+  Building2, Globe, Store
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -38,10 +38,6 @@ interface OpticaTop {
   urlGoogleMaps?: string;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// COMPONENTE: Contador animado
-// ─────────────────────────────────────────────────────────────────
-
 function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; duration?: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -56,14 +52,12 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
       },
       { threshold: 0.3 }
     );
-
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [hasStarted]);
 
   useEffect(() => {
     if (!hasStarted) return;
-
     let startTime: number;
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
@@ -71,7 +65,6 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
       setCount(Math.floor(progress * end));
       if (progress < 1) requestAnimationFrame(animate);
     };
-
     requestAnimationFrame(animate);
   }, [hasStarted, end, duration]);
 
@@ -82,25 +75,19 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
-// COMPONENTE: Google Ad Placeholder
-// ─────────────────────────────────────────────────────────────────
-
 function GoogleAdBanner({ slot }: { slot: string }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
         <div className="text-center py-2 bg-gray-100 border-b border-gray-200">
-          <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">
-            Publicidad
-          </p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Publicidad</p>
         </div>
         <div className="min-h-[90px] flex items-center justify-center p-4">
           <div className="text-center">
             <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mx-auto mb-2">
               <Globe className="w-6 h-6 text-gray-400" />
             </div>
-            <p className="text-xs text-gray-400">Espacio publicitario · Google Ads</p>
+            <p className="text-xs text-gray-400">Espacio publicitario - Google Ads</p>
             <p className="text-[10px] text-gray-300 mt-1">Slot: {slot}</p>
           </div>
         </div>
@@ -108,10 +95,6 @@ function GoogleAdBanner({ slot }: { slot: string }) {
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────
-// COMPONENTE: Banner propio elegante (fallback si no hay banner dinámico)
-// ─────────────────────────────────────────────────────────────────
 
 function BannerPropio() {
   return (
@@ -123,9 +106,7 @@ function BannerPropio() {
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">
-                Publicidad
-              </p>
+              <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">Publicidad</p>
               <h3 className="text-xl md:text-2xl font-bold text-navy-900 mb-2 font-display">
                 ¿Eres proveedor de lentes o armazones?
               </h3>
@@ -134,22 +115,14 @@ function BannerPropio() {
               </p>
             </div>
           </div>
-          <Link
-            href="/contacto-publicidad"
-            className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors flex-shrink-0 shadow-lg hover:shadow-xl flex items-center gap-2"
-          >
-            Conoce más
-            <ArrowRight className="w-4 h-4" />
+          <Link href="/contacto-publicidad" className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors flex-shrink-0 shadow-lg hover:shadow-xl flex items-center gap-2">
+            Conoce más <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
     </section>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────
-// COMPONENTE PRINCIPAL
-// ─────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const [opticas, setOpticas] = useState<OpticaTop[]>([]);
@@ -170,23 +143,12 @@ export default function HomePage() {
           if (data.estado !== "inactiva" && data.estado !== "eliminada") {
             const nombre = data.nombre || data.nombreComercial || "Sin nombre";
             opticasData.push({
-              id: doc.id,
-              nombre,
-              ciudad: data.ciudad,
-              estado: data.estado,
-              plan: data.plan || "free",
-              calificacionGoogle: data.calificacionGoogle,
-              numResenas: data.numResenas,
-              especialidades: data.especialidades || [],
-              fotos: data.fotos || [],
-              logo: data.logo,
-              slug: data.slug || doc.id,
-              descripcion: data.descripcion,
-              horarios: data.horarios || [],
-              verificada: data.verificado || data.plan !== "free",
-              whatsapp: data.whatsapp,
-              telefono: data.telefono,
-              urlGoogleMaps: data.urlGoogleMaps,
+              id: doc.id, nombre, ciudad: data.ciudad, estado: data.estado, plan: data.plan || "free",
+              calificacionGoogle: data.calificacionGoogle, numResenas: data.numResenas,
+              especialidades: data.especialidades || [], fotos: data.fotos || [], logo: data.logo,
+              slug: data.slug || doc.id, descripcion: data.descripcion, horarios: data.horarios || [],
+              verificada: data.verificado || data.plan !== "free", whatsapp: data.whatsapp,
+              telefono: data.telefono, urlGoogleMaps: data.urlGoogleMaps,
             } as OpticaTop);
 
             if (data.ciudad) ciudadesSet.add(data.ciudad);
@@ -195,38 +157,27 @@ export default function HomePage() {
         });
 
         setOpticas(opticasData);
-        setStats({
-          totalOpticas: opticasData.length,
-          totalCiudades: ciudadesSet.size,
-          totalEspecialidades: especialidadesSet.size,
-        });
+        setStats({ totalOpticas: opticasData.length, totalCiudades: ciudadesSet.size, totalEspecialidades: especialidadesSet.size });
       } catch (error) {
         console.error("Error al cargar datos:", error);
       } finally {
         setLoading(false);
       }
     };
-
     cargarDatos();
   }, []);
 
   const { opticasRanking } = useOptiRank({
     opticas: opticas as unknown as Optica[],
-    contexto: {
-      horaActual: new Date(),
-      dispositivo: "desktop",
-      sessionId: "home",
-    },
-    topRecomendadas: 3,
-    autoTrack: false,
+    contexto: { horaActual: new Date(), dispositivo: "desktop", sessionId: "home" },
+    topRecomendadas: 3, autoTrack: false,
   });
 
   const top3 = opticasRanking.slice(0, 3);
 
   const badgesHumanos = [
     {
-      titulo: "La más recomendada",
-      subtitulo: "Elegida por nuestra comunidad",
+      titulo: "La más recomendada", subtitulo: "Elegida por nuestra comunidad",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -236,15 +187,10 @@ export default function HomePage() {
         if (o.verificada) razones.push("verificada");
         return razones.length > 0 ? `Recomendada por: ${razones.join(", ")}` : "Recomendada por su ficha completa";
       },
-      icono: Award,
-      color: "from-amber-500 to-amber-600",
-      bgColor: "bg-amber-50",
-      textColor: "text-amber-900",
-      borderColor: "border-amber-200",
+      icono: Award, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-50", textColor: "text-amber-900", borderColor: "border-amber-200",
     },
     {
-      titulo: "Calificación perfecta",
-      subtitulo: "Excelencia comprobada",
+      titulo: "Calificación perfecta", subtitulo: "Excelencia comprobada",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -254,15 +200,10 @@ export default function HomePage() {
         if (o.verificada) razones.push("verificada premium");
         return razones.length > 0 ? `Recomendada por: ${razones.join(", ")}` : "Recomendada por su ficha completa";
       },
-      icono: Star,
-      color: "from-blue-500 to-blue-600",
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-900",
-      borderColor: "border-blue-200",
+      icono: Star, color: "from-blue-500 to-blue-600", bgColor: "bg-blue-50", textColor: "text-blue-900", borderColor: "border-blue-200",
     },
     {
-      titulo: "Experiencia garantizada",
-      subtitulo: "Servicio de confianza",
+      titulo: "Experiencia garantizada", subtitulo: "Servicio de confianza",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -271,11 +212,7 @@ export default function HomePage() {
         if (o.whatsapp) razones.push("WhatsApp activo");
         return razones.length > 0 ? `Recomendada por: ${razones.join(", ")}` : "Recomendada por su ficha completa";
       },
-      icono: ShieldCheck,
-      color: "from-green-500 to-green-600",
-      bgColor: "bg-green-50",
-      textColor: "text-green-900",
-      borderColor: "border-green-200",
+      icono: ShieldCheck, color: "from-green-500 to-green-600", bgColor: "bg-green-50", textColor: "text-green-900", borderColor: "border-green-200",
     },
   ];
 
@@ -327,24 +264,16 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Descubre ópticas verificadas con reseñas reales, horarios en vivo y contacto directo. 
+              Descubre ópticas verificadas con reseñas reales, horarios en vivo y contacto directo.
               Tu próxima visita empieza aquí.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/opticas"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg hover:shadow-xl"
-              >
-                <Search className="w-5 h-5" />
-                Explorar directorio
+              <Link href="/opticas" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg hover:shadow-xl">
+                <Search className="w-5 h-5" /> Explorar directorio
               </Link>
-              <Link
-                href="/login?redirect=/registro"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20"
-              >
-                <EyeIcon className="w-5 h-5" />
-                Registra tu óptica
+              <Link href="/registro" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20">
+                <EyeIcon className="w-5 h-5" /> Registra tu óptica
               </Link>
             </div>
 
@@ -378,7 +307,7 @@ export default function HomePage() {
               Las ópticas que más recomendamos
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Seleccionadas por nuestro algoritmo OptiRank basado en calificación, ubicación, 
+              Seleccionadas por nuestro algoritmo OptiRank basado en calificación, ubicación,
               horarios y completitud de información.
             </p>
           </div>
@@ -392,11 +321,7 @@ export default function HomePage() {
               const razonTexto = badge.razon(optica);
 
               return (
-                <Link
-                  key={optica.id}
-                  href={`/opticas/${optica.slug || optica.id}`}
-                  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-200"
-                >
+                <Link key={optica.id} href={`/opticas/${optica.slug || optica.id}`} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-200">
                   <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
                     {imagenPrincipal ? (
                       <img src={imagenPrincipal} alt={optica.nombre} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -420,9 +345,7 @@ export default function HomePage() {
 
                     {(optica.plan === "premium_plus" || optica.plan === "premium") && (
                       <div className="absolute top-4 right-4">
-                        <span className={`px-2 py-1 text-white text-[10px] font-bold rounded-full flex items-center gap-1 shadow-sm ${
-                          optica.plan === "premium_plus" ? "bg-amber-500" : "bg-navy-900"
-                        }`}>
+                        <span className={`px-2 py-1 text-white text-[10px] font-bold rounded-full flex items-center gap-1 shadow-sm ${optica.plan === "premium_plus" ? "bg-amber-500" : "bg-navy-900"}`}>
                           {optica.plan === "premium_plus" ? <Crown className="w-2.5 h-2.5" /> : <Star className="w-2.5 h-2.5" />}
                           {optica.plan === "premium_plus" ? "PREMIUM+" : "PREMIUM"}
                         </span>
@@ -431,13 +354,9 @@ export default function HomePage() {
                   </div>
 
                   <div className="p-6">
-                    <h3 className="font-bold text-navy-900 text-xl mb-2 font-display group-hover:text-navy-700 transition-colors">
-                      {optica.nombre}
-                    </h3>
-
+                    <h3 className="font-bold text-navy-900 text-xl mb-2 font-display group-hover:text-navy-700 transition-colors">{optica.nombre}</h3>
                     <p className="text-sm text-gray-600 mb-3 flex items-center gap-1">
-                      <MapPin className="w-3 h-3 flex-shrink-0" />
-                      {optica.ciudad}{optica.estado ? `, ${optica.estado}` : ""}
+                      <MapPin className="w-3 h-3 flex-shrink-0" /> {optica.ciudad}{optica.estado ? `, ${optica.estado}` : ""}
                     </p>
 
                     {optica.calificacionGoogle && (
@@ -460,32 +379,26 @@ export default function HomePage() {
                       </div>
                     )}
 
-                    {optica.descripcion && (
-                      <p className="text-sm text-gray-600 line-clamp-2 mb-4">{optica.descripcion}</p>
-                    )}
+                    {optica.descripcion && <p className="text-sm text-gray-600 line-clamp-2 mb-4">{optica.descripcion}</p>}
 
                     <div className={`mb-4 p-3 ${badge.bgColor} border ${badge.borderColor} rounded-lg`}>
                       <p className="text-[11px] text-gray-700 italic flex items-start gap-1.5">
-                        <Sparkles className="w-3 h-3 flex-shrink-0 mt-0.5 text-amber-600" />
-                        {razonTexto}
+                        <Sparkles className="w-3 h-3 flex-shrink-0 mt-0.5 text-amber-600" /> {razonTexto}
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                       <span className="text-sm font-semibold text-navy-700 flex items-center gap-1 group-hover:gap-2 transition-all">
-                        Ver ficha completa
-                        <ChevronRight className="w-4 h-4" />
+                        Ver ficha completa <ChevronRight className="w-4 h-4" />
                       </span>
                       <div className="flex items-center gap-1">
                         {abierta ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                            Abierta
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Abierta
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                            Cerrada
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Cerrada
                           </span>
                         )}
                       </div>
@@ -497,12 +410,8 @@ export default function HomePage() {
           </div>
 
           <div className="text-center mt-12">
-            <Link
-              href="/opticas"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors shadow-lg"
-            >
-              Ver todas las ópticas
-              <ArrowRight className="w-5 h-5" />
+            <Link href="/opticas" className="inline-flex items-center gap-2 px-8 py-4 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors shadow-lg">
+              Ver todas las ópticas <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
@@ -516,12 +425,9 @@ export default function HomePage() {
               <Zap className="w-4 h-4" />
               <span className="text-sm font-semibold">Tecnología OptiRank</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
-              Por qué las recomendamos
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Por qué las recomendamos</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Nuestro sistema de ranking inteligente analiza múltiples factores para mostrarte 
-              las mejores opciones según lo que buscas.
+              Nuestro sistema de ranking inteligente analiza múltiples factores para mostrarte las mejores opciones según lo que buscas.
             </p>
           </div>
 
@@ -542,19 +448,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 📍 GOOGLE ADS - Entre secciones */}
       <GoogleAdBanner slot="home-between-1" />
 
       {/* BENEFICIOS */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
-              Todo lo que necesitas en un solo lugar
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Herramientas poderosas para encontrar la óptica ideal sin complicaciones.
-            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Todo lo que necesitas en un solo lugar</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la óptica ideal sin complicaciones.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -574,33 +475,80 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 📍 BANNER DINÁMICO - Antes del CTA final */}
+      {/* ✅ NUEVA SECCIÓN: PLANES Y MULTI-SUCURSALES (Mobile First) */}
+      <section className="py-16 md:py-20 bg-gradient-to-br from-gold-50 via-white to-amber-50 border-y border-gold-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-100 text-gold-800 rounded-full mb-4">
+              <Crown className="w-4 h-4" />
+              <span className="text-sm font-semibold">Haz crecer tu negocio</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
+              Planes flexibles y Multi-Sucursales
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+              Desde una única óptica hasta cadenas corporativas. Tenemos la solución perfecta para escalar tu visibilidad.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm text-center hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MapPin className="w-6 h-6 text-gray-600" />
+              </div>
+              <h3 className="text-xl font-bold text-navy-900 mb-2">Plan Free</h3>
+              <p className="text-3xl font-bold text-navy-900 mb-2">$0</p>
+              <p className="text-sm text-gray-600">1 sucursal máxima. Presencia básica garantizada.</p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl border-2 border-navy-900 shadow-lg text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-navy-900 text-white text-[10px] px-3 py-1 rounded-bl-lg font-bold">POPULAR</div>
+              <div className="w-12 h-12 bg-navy-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Star className="w-6 h-6 text-navy-700" />
+              </div>
+              <h3 className="text-xl font-bold text-navy-900 mb-2">Premium / Premium+</h3>
+              <p className="text-3xl font-bold text-navy-900 mb-2">Hasta 3</p>
+              <p className="text-sm text-gray-600">Sucursales máximas. Máxima visibilidad y herramientas de gestión.</p>
+            </div>
+            
+            <div className="bg-navy-900 p-6 rounded-2xl border border-navy-800 shadow-lg text-center text-white">
+              <div className="w-12 h-12 bg-gold-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-6 h-6 text-gold-400" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Corporativo</h3>
+              <p className="text-3xl font-bold text-gold-400 mb-2">4+ Sucursales</p>
+              <p className="text-sm text-navy-200">Tarifas preferenciales, facturación consolidada y gestor dedicado.</p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              href="/registro"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl text-lg"
+            >
+              <Store className="w-5 h-5" />
+              Consulta Planes y Beneficios Completos
+            </Link>
+            <p className="text-sm text-gray-500 mt-4">Sin compromisos. Cancela cuando quieras.</p>
+          </div>
+        </div>
+      </section>
+
       <BannerDinamico ubicacion="home-footer" />
 
       {/* CTA FINAL */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">
-            ¿Tienes una óptica?
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">¿Tienes una óptica?</h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Únete al directorio más completo de ópticas en México. 
-            Aumenta tu visibilidad y atrae más clientes.
+            Únete al directorio más completo de ópticas en México. Aumenta tu visibilidad y atrae más clientes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/login?redirect=/registro"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg"
-            >
-              <Sparkles className="w-5 h-5" />
-              Registra tu óptica gratis
+            <Link href="/registro" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg">
+              <Sparkles className="w-5 h-5" /> Registra tu óptica gratis
             </Link>
-            <Link
-              href="/opticas"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20"
-            >
-              Explorar directorio
-              <ArrowRight className="w-5 h-5" />
+            <Link href="/opticas" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20">
+              Explorar directorio <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
