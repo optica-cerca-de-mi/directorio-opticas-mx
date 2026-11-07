@@ -5,25 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import {
-  Check, Star, Award, Crown, ArrowRight, ShieldCheck, CalendarDays,
-  MessageCircle, MapPin, Search, TrendingUp, Users, Smartphone, Clock,
-  CreditCard, Sparkles, Bot, Zap, Globe, Brain, UserCog, Image as ImageIcon,
-  FileText, Percent, HeadphonesIcon, AlertCircle, Megaphone, Info, Loader2, Store
+  Check, Star, Crown, ArrowRight, Sparkles, Store, MapPin, Info
 } from "lucide-react";
-
-function AdSpace({ size = "horizontal" }: { size?: "horizontal" | "square" }) {
-  return (
-    <div className="w-full flex justify-center my-8 md:my-12 px-4">
-      <div className={`relative bg-gray-50 border border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center w-full ${size === "horizontal" ? "max-w-4xl h-24 md:h-32" : "max-w-xs h-64"}`}>
-        <div className="absolute top-2 right-3 flex items-center gap-1">
-          <Megaphone className="w-3 h-3 text-gray-400" />
-          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Publicidad</span>
-        </div>
-        <p className="text-xs text-gray-400 font-medium">Espacio publicitario</p>
-      </div>
-    </div>
-  );
-}
 
 const planes = [
   {
@@ -55,6 +38,7 @@ export default function RegistroPage() {
   const cargando = auth.cargando || auth.loading;
   const router = useRouter();
 
+  // Si ya está logueado, lo mandamos al dashboard (desde ahí puede agregar ópticas)
   useEffect(() => {
     if (!cargando && usuario) {
       router.push("/dashboard");
@@ -64,8 +48,7 @@ export default function RegistroPage() {
   if (cargando) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-navy-700 animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Cargando...</p>
+        <div className="w-12 h-12 border-4 border-navy-700 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -88,7 +71,7 @@ export default function RegistroPage() {
         </div>
       </section>
 
-      {/* SECCIÓN MULTI-SUCURSALES (NUEVA) */}
+      {/* SECCIÓN MULTI-SUCURSALES */}
       <section className="py-10 bg-gold-50 border-b border-gold-200 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-white border border-gold-300 text-navy-900 px-4 py-2 rounded-full text-sm font-bold mb-4 shadow-sm">
@@ -176,7 +159,8 @@ export default function RegistroPage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href={`/registro/${plan.id}`} className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-bold text-base transition-all bg-navy-900 hover:bg-navy-800 text-white">
+                  {/* ✅ CORRECCIÓN 1: Redirige a Login con el plan como destino final */}
+                  <Link href={`/login?redirect=/registro/${plan.id}`} className="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-bold text-base transition-all bg-navy-900 hover:bg-navy-800 text-white">
                     {plan.cta} <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -212,7 +196,8 @@ export default function RegistroPage() {
                     o ${planPremiumPlus.precioAnual} al año <span className="text-green-600 font-bold bg-green-100 px-2 py-0.5 rounded">({planPremiumPlus.descuentoAnual})</span>
                   </div>
                 </div>
-                <Link href={`/registro/${planPremiumPlus.id}`} className="w-full md:w-auto inline-flex items-center justify-center gap-2 py-3 px-8 rounded-xl font-bold text-base transition-all bg-gold-500 hover:bg-gold-400 text-white shadow-lg">
+                {/* ✅ CORRECCIÓN 1: Redirige a Login con el plan como destino final */}
+                <Link href={`/login?redirect=/registro/${planPremiumPlus.id}`} className="w-full md:w-auto inline-flex items-center justify-center gap-2 py-3 px-8 rounded-xl font-bold text-base transition-all bg-gold-500 hover:bg-gold-400 text-white shadow-lg">
                   {planPremiumPlus.cta} <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -244,10 +229,11 @@ export default function RegistroPage() {
             Únete hoy y comienza a recibir visitas de clientes potenciales en tu zona.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/registro/free" className="px-8 py-3 bg-white text-navy-900 font-bold rounded-xl hover:bg-gray-100 transition-colors">
+            {/* ✅ CORRECCIÓN 1: Redirige a Login con el plan Free como destino final */}
+            <Link href="/login?redirect=/registro/free" className="px-8 py-3 bg-white text-navy-900 font-bold rounded-xl hover:bg-gray-100 transition-colors">
               Empezar gratis
             </Link>
-            <Link href="/registro/premium_plus" className="px-8 py-3 bg-gold-500 hover:bg-gold-400 text-white font-bold rounded-xl transition-colors">
+            <Link href="/login?redirect=/registro/premium_plus" className="px-8 py-3 bg-gold-500 hover:bg-gold-400 text-white font-bold rounded-xl transition-colors">
               Ver plan Premium+
             </Link>
           </div>
