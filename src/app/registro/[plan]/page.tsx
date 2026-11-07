@@ -222,9 +222,45 @@ export default function WizardRegistro() {
       return;
     }
 
+    // ✅ Verificar que el usuario esté logueado
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Debes iniciar sesión para registrar una óptica.");
+      router.push("/login?redirect=/registro/" + planActual);
+      return;
+    }
+
     setPublicando(true);
 
     try {
+      // ✅ Llamar al endpoint seguro del backend
+      const respuesta = await fetch("/api/crear-optica", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          formData: formData,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "Error al crear la óptica");
+      }
+
+      // ✅ Éxito: redirigir al dashboard de la nueva óptica
+      router.push(`/dashboard/${datos.opticaId}`);
+      
+    } catch (error: any) {
+      console.error("Error al publicar la ficha:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setPublicando(false);
+    }
+  };
+
       // ✅ VALIDACIÓN DE UNICIDAD ANTI-FRAUDE
       const phoneQuery = query(collection(db, "opticas"), where("telefono", "==", formData.telefono));
       const phoneSnapshot = await getDocs(phoneQuery);
