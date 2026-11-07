@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
@@ -33,6 +33,7 @@ interface FormData {
   ciudad: string;
   estado: string;
   telefono: string;
+  googleMapsLink: string;
   horarios: { dia: string; apertura: string; cierre: string; cerrado: boolean }[];
   whatsapp: string;
   sitioWeb: string;
@@ -62,6 +63,7 @@ export default function WizardRegistro() {
     ciudad: "",
     estado: "",
     telefono: "",
+    googleMapsLink: "",
     horarios: [
       { dia: "Lunes", apertura: "09:00", cierre: "18:00", cerrado: false },
       { dia: "Martes", apertura: "09:00", cierre: "18:00", cerrado: false },
@@ -133,7 +135,7 @@ export default function WizardRegistro() {
 
   const puedeAvanzar = () => {
     if (pasoActual === 1) {
-      return formData.nombre && formData.direccion && formData.ciudad && formData.estado && formData.telefono;
+      return formData.nombre && formData.direccion && formData.ciudad && formData.estado && formData.telefono && formData.googleMapsLink;
     }
     return true;
   };
@@ -207,13 +209,8 @@ export default function WizardRegistro() {
   };
 
   const publicarFicha = async () => {
-    // ✅ VALIDACIÓN ABSOLUTA: Si no está marcado, se detiene la ejecución.
-    console.log("Estado de aceptaTerminos al hacer clic:", formData.aceptaTerminos);
-    
     if (!formData.aceptaTerminos) {
       alert("⚠️ Para continuar, es OBLIGATORIO aceptar los Términos y Condiciones y el Aviso de Privacidad.");
-      
-      // Hace scroll suave hacia el checkbox y lo resalta
       const checkboxElement = document.getElementById("checkbox-terminos");
       if (checkboxElement) {
         checkboxElement.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -222,12 +219,29 @@ export default function WizardRegistro() {
           checkboxElement.classList.remove("bg-red-50", "ring-2", "ring-red-400");
         }, 2000);
       }
-      return; // DETIENE LA FUNCIÓN AQUÍ. NO CREA LA CUENTA.
+      return;
     }
 
     setPublicando(true);
 
     try {
+      // ✅ VALIDACIÓN DE UNICIDAD ANTI-FRAUDE
+      const phoneQuery = query(collection(db, "opticas"), where("telefono", "==", formData.telefono));
+      const phoneSnapshot = await getDocs(phoneQuery);
+      if (!phoneSnapshot.empty) {
+        alert("⚠️ Este número de teléfono ya está registrado en otra óptica. Por seguridad, no permitimos duplicados.");
+        setPublicando(false);
+        return;
+      }
+
+      const mapsQuery = query(collection(db, "opticas"), where("googleMapsLink", "==", formData.googleMapsLink));
+      const mapsSnapshot = await getDocs(mapsQuery);
+      if (!mapsSnapshot.empty) {
+        alert("⚠️ Este enlace de Google Maps ya está asociado a otra óptica. Verifica la información.");
+        setPublicando(false);
+        return;
+      }
+
       const emailTemporal = `${formData.nombre.toLowerCase().replace(/\s+/g, ".")}.${Date.now()}@optica.temp`;
       const passwordTemporal = `Optica${Date.now()}!`;
 
@@ -259,6 +273,7 @@ export default function WizardRegistro() {
         ciudad: formData.ciudad,
         estado: formData.estado,
         telefono: formData.telefono,
+        googleMapsLink: formData.googleMapsLink,
         horarios: formData.horarios,
         whatsapp: formData.whatsapp,
         sitioWeb: formData.sitioWeb,
@@ -278,7 +293,6 @@ export default function WizardRegistro() {
         fechaVencimiento: fechaVencimiento.toISOString(),
         estado: "activa",
         email: emailTemporal,
-        // ✅ AUDITORÍA LEGAL: Guardamos el consentimiento en la base de datos
         consentimientoTerminos: true,
         fechaConsentimiento: serverTimestamp(),
       });
@@ -419,6 +433,23 @@ export default function WizardRegistro() {
                         placeholder="Ej: 55 1234 5678"
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Enlace de Google Maps *
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.googleMapsLink}
+                        onChange={(e) => actualizarCampo("googleMapsLink", e.target.value)}
+                        placeholder="https://maps.app.goo.gl/..."
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                        required
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Pega el enlace de "Compartir" de Google Maps de tu sucursal.
+                      </p>
                     </div>
                   </div>
                 </div>
