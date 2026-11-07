@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Loader2, Store, Plus, Crown, Star, Eye, Edit3, MapPin } from "lucide-react";
+import { Loader2, Store, Plus, MapPin } from "lucide-react";
 import Link from "next/link";
 
 interface OpticaResumen {
@@ -35,7 +35,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const cargarOpticas = async () => {
       if (!usuario) return;
-      
+
       try {
         const q = query(
           collection(db, "opticas"),
@@ -43,12 +43,13 @@ export default function DashboardPage() {
         );
         const snapshot = await getDocs(q);
         const opticasData: OpticaResumen[] = [];
-        
+
         snapshot.forEach((doc) => {
           const data = doc.data();
           opticasData.push({
             id: doc.id,
-            nombreComercial: data.nombreComercial || "Sin nombre",
+            // Fallback por si el campo se guardó como 'nombre' en lugar de 'nombreComercial'
+            nombreComercial: data.nombre || data.nombreComercial || "Sin nombre",
             ciudad: data.ciudad,
             estado: data.estado,
             plan: data.plan || "free",
@@ -58,7 +59,7 @@ export default function DashboardPage() {
 
         setOpticas(opticasData);
 
-        // Si solo tiene una óptica, redirigir automáticamente
+        // Si solo tiene una óptica, redirigir automáticamente a su dashboard específico
         if (opticasData.length === 1) {
           router.push(`/dashboard/${opticasData[0].id}`);
         }
@@ -82,6 +83,23 @@ export default function DashboardPage() {
 
   if (!usuario) return null;
 
+  // ✅ LÓGICA DE ENRUTAMIENTO INTELIGENTE
+  const obtenerPlanParaNuevaOptica = () => {
+    if (opticas.length === 0) return "free";
+    
+    const tienePremiumPlus = opticas.some(o => o.plan === "premium_plus");
+    const tienePremium = opticas.some(o => o.plan === "premium");
+    
+    if (tienePremiumPlus) return "premium_plus";
+    if (tienePremium) return "premium";
+    
+    // Si es Free y ya tiene 1 óptica, debe hacer upgrade a Premium para agregar otra
+    return "premium"; 
+  };
+
+  const planDestino = obtenerPlanParaNuevaOptica();
+  const hrefDestino = `/registro/${planDestino}`;
+
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -90,7 +108,7 @@ export default function DashboardPage() {
             ¡Hola, {usuario.displayName || usuario.email}! 👋
           </h1>
           <p className="text-gray-600">
-            {opticas.length === 0 
+            {opticas.length === 0
               ? "Aún no tienes ópticas registradas"
               : `Tienes ${opticas.length} óptica${opticas.length > 1 ? 's' : ''}`}
           </p>
@@ -99,16 +117,16 @@ export default function DashboardPage() {
         {opticas.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {opticas.map((optica) => {
-              const planColor = optica.plan === "premium_plus" 
-                ? "bg-gradient-to-r from-amber-500 to-amber-600" 
-                : optica.plan === "premium" 
-                ? "bg-navy-900" 
+              const planColor = optica.plan === "premium_plus"
+                ? "bg-gradient-to-r from-amber-500 to-amber-600"
+                : optica.plan === "premium"
+                ? "bg-navy-900"
                 : "bg-gray-400";
-              
-              const planLabel = optica.plan === "premium_plus" 
-                ? "PREMIUM+" 
-                : optica.plan === "premium" 
-                ? "PREMIUM" 
+
+              const planLabel = optica.plan === "premium_plus"
+                ? "PREMIUM+"
+                : optica.plan === "premium"
+                ? "PREMIUM"
                 : "FREE";
 
               return (
@@ -135,13 +153,18 @@ export default function DashboardPage() {
               );
             })}
 
+            {/* ✅ BOTÓN PARA AGREGAR NUEVA SUCURSAL (Redirige al wizard con el plan correcto) */}
             <Link
-              href="/crear-optica"
+              href={hrefDestino}
               className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center hover:border-navy-500 hover:bg-navy-50 transition-all min-h-[200px]"
             >
               <Plus className="w-12 h-12 text-gray-400 mb-2" />
               <h3 className="text-lg font-bold text-navy-900">Agregar óptica</h3>
-              <p className="text-sm text-gray-600">¿Tienes otra sucursal?</p>
+              <p className="text-sm text-gray-600 text-center mt-1">
+                {planDestino === "premium" && opticas.every(o => o.plan === "free")
+                  ? "Actualiza a Premium para agregar sucursales"
+                  : "¿Tienes otra sucursal?"}
+              </p>
             </Link>
           </div>
         ) : (
@@ -154,7 +177,7 @@ export default function DashboardPage() {
               Completa la información básica y comienza a personalizar tu ficha.
             </p>
             <Link
-              href="/crear-optica"
+              href={hrefDestino}
               className="inline-flex items-center gap-2 px-8 py-4 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors"
             >
               <Plus className="w-5 h-5" />
