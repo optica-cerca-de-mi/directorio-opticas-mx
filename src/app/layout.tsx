@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   },
   description:
     "Encuentra la óptica perfecta cerca de ti. Reseñas reales de Google, horarios en vivo, ubicación y contacto directo. El directorio #1 de ópticas en México.",
+  icons: {
+    icon: "/icon",  // Esto apunta automáticamente al icon.tsx
+  },
   keywords: [
     "óptica",
     "lentes",
