@@ -260,7 +260,6 @@ export default function WizardRegistro() {
       setPublicando(false);
     }
   };
-
       // ✅ VALIDACIÓN DE UNICIDAD ANTI-FRAUDE
       const phoneQuery = query(collection(db, "opticas"), where("telefono", "==", formData.telefono));
       const phoneSnapshot = await getDocs(phoneQuery);
