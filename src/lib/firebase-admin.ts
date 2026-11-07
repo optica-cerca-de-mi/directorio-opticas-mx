@@ -1,6 +1,7 @@
 import admin from "firebase-admin";
 
-if (!admin.apps.length) {
+// ✅ Usamos optional chaining (?.) para evitar errores en Vercel
+if (!admin.apps?.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
@@ -10,7 +11,5 @@ if (!admin.apps.length) {
   });
 }
 
-const db = admin.firestore();
-const auth = admin.auth();
-
-export { db, auth };
+export const db = admin.firestore();
+export const auth = admin.auth();
