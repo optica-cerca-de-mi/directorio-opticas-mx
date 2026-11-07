@@ -20,9 +20,7 @@ import {
   X
 } from "lucide-react";
 import Link from "next/link";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { useConfig } from "@/hooks/useConfig";
@@ -208,6 +206,7 @@ export default function WizardRegistro() {
     }
   };
 
+  // ✅ FUNCIÓN CORREGIDA: Usa el endpoint seguro del backend
   const publicarFicha = async () => {
     if (!formData.aceptaTerminos) {
       alert("⚠️ Para continuar, es OBLIGATORIO aceptar los Términos y Condiciones y el Aviso de Privacidad.");
@@ -222,18 +221,16 @@ export default function WizardRegistro() {
       return;
     }
 
-    // ✅ Verificar que el usuario esté logueado
     const currentUser = auth.currentUser;
     if (!currentUser) {
       alert("Debes iniciar sesión para registrar una óptica.");
-      router.push("/login?redirect=/registro/" + planActual);
+      router.push("/login?redirect=/registro/" + formData.planSeleccionado);
       return;
     }
 
     setPublicando(true);
 
     try {
-      // ✅ Llamar al endpoint seguro del backend
       const respuesta = await fetch("/api/crear-optica", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -250,92 +247,11 @@ export default function WizardRegistro() {
         throw new Error(datos.error || "Error al crear la óptica");
       }
 
-      // ✅ Éxito: redirigir al dashboard de la nueva óptica
       router.push(`/dashboard/${datos.opticaId}`);
       
     } catch (error: any) {
       console.error("Error al publicar la ficha:", error);
       alert(`Error: ${error.message}`);
-    } finally {
-      setPublicando(false);
-    }
-  };
-      // ✅ VALIDACIÓN DE UNICIDAD ANTI-FRAUDE
-      const phoneQuery = query(collection(db, "opticas"), where("telefono", "==", formData.telefono));
-      const phoneSnapshot = await getDocs(phoneQuery);
-      if (!phoneSnapshot.empty) {
-        alert("⚠️ Este número de teléfono ya está registrado en otra óptica. Por seguridad, no permitimos duplicados.");
-        setPublicando(false);
-        return;
-      }
-
-      const mapsQuery = query(collection(db, "opticas"), where("googleMapsLink", "==", formData.googleMapsLink));
-      const mapsSnapshot = await getDocs(mapsQuery);
-      if (!mapsSnapshot.empty) {
-        alert("⚠️ Este enlace de Google Maps ya está asociado a otra óptica. Verifica la información.");
-        setPublicando(false);
-        return;
-      }
-
-      const emailTemporal = `${formData.nombre.toLowerCase().replace(/\s+/g, ".")}.${Date.now()}@optica.temp`;
-      const passwordTemporal = `Optica${Date.now()}!`;
-
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        emailTemporal,
-        passwordTemporal
-      );
-      const uid = userCredential.user.uid;
-
-      const slug = `${formData.nombre.toLowerCase().replace(/\s+/g, "-")}-${uid.slice(0, 6)}`;
-
-      const diasDePlan = formData.billingCycle === "yearly" ? 365 : 30;
-      const fechaVencimiento = new Date();
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + diasDePlan);
-
-      let polizaVencimiento = null;
-      if (formData.aceptaPoliza) {
-        const diasPoliza = formData.polizaBillingCycle === "yearly" ? 365 : 30;
-        polizaVencimiento = new Date();
-        polizaVencimiento.setDate(polizaVencimiento.getDate() + diasPoliza);
-      }
-
-      await setDoc(doc(db, "opticas", uid), {
-        uid: uid,
-        slug: slug,
-        nombre: formData.nombre,
-        direccion: formData.direccion,
-        ciudad: formData.ciudad,
-        estado: formData.estado,
-        telefono: formData.telefono,
-        googleMapsLink: formData.googleMapsLink,
-        horarios: formData.horarios,
-        whatsapp: formData.whatsapp,
-        sitioWeb: formData.sitioWeb,
-        facebook: formData.facebook,
-        instagram: formData.instagram,
-        especialidades: formData.especialidades,
-        segurosAceptados: formData.segurosAceptados,
-        descripcion: formData.descripcion,
-        fotos: formData.fotos,
-        videoUrl: formData.videoUrl,
-        plan: formData.planSeleccionado,
-        billingCycle: formData.billingCycle,
-        polizaActiva: formData.aceptaPoliza,
-        polizaBillingCycle: formData.aceptaPoliza ? formData.polizaBillingCycle : null,
-        polizaVencimiento: polizaVencimiento ? polizaVencimiento.toISOString() : null,
-        fechaCreacion: serverTimestamp(),
-        fechaVencimiento: fechaVencimiento.toISOString(),
-        estado: "activa",
-        email: emailTemporal,
-        consentimientoTerminos: true,
-        fechaConsentimiento: serverTimestamp(),
-      });
-
-      router.push(`/dashboard/${uid}`);
-    } catch (error: any) {
-      console.error("Error al publicar la ficha:", error);
-      alert(`Error al registrar: ${error.message}`);
     } finally {
       setPublicando(false);
     }
