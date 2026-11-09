@@ -14,10 +14,10 @@ import { db } from "@/lib/firebase";
 import { useOptiRank } from "@/hooks/useOptiRank";
 import { estaAbiertaEn } from "@/lib/ranking-engine";
 import { Optica } from "@/types/optica";
-import { AdSlot } from "@/components/OptiAdBoost";
-import { useUserLocation } from "@/hooks/useUserLocation";
-import FooterPublico from "@/components/FooterPublico";
 import BannerDinamico from "@/components/BannerDinamico";
+import { useUserLocation } from "@/hooks/useUserLocation";
+import { AdSlot } from "@/components/OptiAdBoost";
+import FooterPublico from "@/components/FooterPublico";
 
 interface OpticaTop {
   id: string;
@@ -429,6 +429,7 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ✅ OptiAdBoost: Espacio publicitario Home */}
       <AdSlot slotId="home-between-1" />
 
       {/* BENEFICIOS */}
@@ -456,7 +457,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ✅ NUEVA SECCIÓN: PLANES Y MULTI-SUCURSALES (Mobile First) */}
+      {/* PLANES Y MULTI-SUCURSALES */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-gold-50 via-white to-amber-50 border-y border-gold-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -515,6 +516,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Banner propio (proveedores) */}
+      <BannerPropio />
+
       {/* CTA FINAL */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -532,6 +536,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ✅ Footer Público con OptiAdBoost */}
       <FooterPublico />
     </main>
   );
