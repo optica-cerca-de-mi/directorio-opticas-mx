@@ -1,22 +1,20 @@
-import * as admin from "firebase-admin";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const admin = require("firebase-admin");
 
-// ✅ Solución definitiva: Evita el error "Cannot read properties of undefined" en Vercel
-const apps = (admin as any).apps || [];
-
-if (apps.length === 0 && process.env.FIREBASE_PROJECT_ID) {
+if (process.env.FIREBASE_PROJECT_ID && !admin.apps?.length) {
   try {
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Reemplaza los \n literales por saltos de línea reales
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        // ✅ Sin replace, la clave ya tiene saltos de línea reales
+        privateKey: process.env.FIREBASE_PRIVATE_KEY,
       }),
     });
   } catch (error) {
-    console.error("❌ Error al inicializar Firebase Admin:", error);
+    console.error("❌ Error inicializando Firebase Admin:", error);
   }
 }
 
-export const db = admin.firestore();
-export const auth = admin.auth();
+export const db = admin.firestore ? admin.firestore() : null;
+export const auth = admin.auth ? admin.auth() : null;
