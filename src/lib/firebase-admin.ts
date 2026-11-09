@@ -1,19 +1,21 @@
 import * as admin from "firebase-admin";
 
-// Verificamos que las variables de entorno existan para evitar errores silenciosos
-if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PRIVATE_KEY) {
-  console.warn("⚠️ Advertencia: Faltan variables de entorno de Firebase Admin. La API de creación de ópticas no funcionará.");
-}
+// ✅ Solución definitiva: Evita el error "Cannot read properties of undefined" en Vercel
+const apps = (admin as any).apps || [];
 
-// Inicializamos solo si no hay apps corriendo
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+if (apps.length === 0 && process.env.FIREBASE_PROJECT_ID) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        // Reemplaza los \n literales por saltos de línea reales
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+  } catch (error) {
+    console.error("❌ Error al inicializar Firebase Admin:", error);
+  }
 }
 
 export const db = admin.firestore();
