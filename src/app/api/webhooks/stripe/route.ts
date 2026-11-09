@@ -1,90 +1,84 @@
-import { NextRequest, NextResponse } from 'next/server';
-import stripe from '@/lib/stripe';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { db } from "@/lib/firebase-admin"; // Usamos la configuración que ya arreglamos
 
-export async function POST(request: NextRequest) {
+// Inicializar Stripe con tu clave secreta
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2023-10-16", // Ajusta a la versión que estés usando en tu proyecto
+});
+
+export async function POST(req: NextRequest) {
+  const body = await req.text();
+  const signature = req.headers.get("stripe-signature")!;
+
+  let event: Stripe.Event;
+
+  // 1. Verificar que el evento venga realmente de Stripe
   try {
-    // Obtener el body como texto (necesario para verificar la firma)
-    const body = await request.text();
-    
-    // Obtener la firma del header
-    const signature = request.headers.get('stripe-signature') || '';
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET!
+    );
+  } catch (err: any) {
+    console.error(`❌ Error de firma de Stripe: ${err.message}`);
+    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  }
 
-    // Verificar la firma del webhook
-    let event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        process.env.STRIPE_WEBHOOK_SECRET || ''
-      );
-    } catch (err: any) {
-      console.error('❌ Error verificando firma del webhook:', err.message);
-      return NextResponse.json(
-        { error: `Webhook signature verification failed: ${err.message}` },
-        { status: 400 }
-      );
-    }
+  // 2. ✅ VERIFICACIÓN DE IDEMPOTENCIA
+  // Revisamos si ya procesamos este evento exacto (por su ID único)
+  const eventId = event.id;
+  const eventDoc = await db.collection("webhook_events").doc(eventId).get();
+  
+  if (eventDoc.exists) {
+    console.log(`⚠️ Evento ${eventId} ya procesado anteriormente. Ignorando para evitar duplicados.`);
+    return new NextResponse("OK", { status: 200 });
+  }
 
-    // Manejar el evento de checkout completado
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as any;
+  try {
+    // 3. PROCESAMIENTO DEL EVENTO
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      
+      // Extraemos los metadatos que enviamos desde el frontend
+      const { userId, opticaId, plan, billingCycle } = session.metadata || {};
 
-      // Extraer datos del metadata
-      const { opticaId, plan, userId } = session.metadata;
-      const paymentStatus = session.payment_status;
-
-      if (!opticaId || !plan) {
-        console.error('❌ Metadata incompleto en la sesión:', session.metadata);
-        return NextResponse.json({ error: 'Metadata incompleto' }, { status: 400 });
+      if (!userId || !opticaId || !plan) {
+        throw new Error("Faltan metadatos críticos (userId, opticaId, plan) en la sesión de Stripe");
       }
 
-      // Calcular fechas
-      const now = new Date();
-      const endDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // +30 días
+      // Calculamos la nueva fecha de vencimiento
+      const dias = billingCycle === "yearly" ? 365 : 30;
+      const fechaVencimiento = new Date();
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + dias);
 
-      // Actualizar la óptica en Firestore
-      const opticaRef = doc(db, 'opticas', opticaId);
-      await updateDoc(opticaRef, {
+      // Actualizamos la ficha de la óptica en Firestore
+      await db.collection("opticas").doc(opticaId).update({
         plan: plan,
-        planStatus: 'active',
-        planStartDate: now.toISOString(),
-        planEndDate: endDate.toISOString(),
+        billingCycle: billingCycle,
+        fechaVencimiento: fechaVencimiento.toISOString(),
+        estado: "activa",
         stripeSessionId: session.id,
-        stripePaymentStatus: paymentStatus,
-        stripeCustomerId: session.customer || null,
-        planRenewalReminderSent: false,
-        updatedAt: serverTimestamp(),
+        fechaUltimoPago: new Date().toISOString(),
       });
-
-      console.log('✅ Plan activado para óptica:', opticaId, 'Plan:', plan);
+      
+      console.log(`✅ Plan ${plan} (${billingCycle}) activado exitosamente para la óptica: ${opticaId}`);
     }
 
-    // Manejar pago fallido
-    if (event.type === 'payment_intent.payment_failed') {
-      const paymentIntent = event.data.object as any;
-      const opticaId = paymentIntent.metadata?.opticaId;
+    // 4. ✅ MARCAR COMO PROCESADO (Solo si todo lo anterior salió bien)
+    await db.collection("webhook_events").doc(eventId).set({
+      processedAt: new Date().toISOString(),
+      type: event.type,
+      sessionId: event.type === "checkout.session.completed" ? (event.data.object as Stripe.Checkout.Session).id : null,
+    });
 
-      if (opticaId) {
-        const opticaRef = doc(db, 'opticas', opticaId);
-        await updateDoc(opticaRef, {
-          lastPaymentStatus: 'failed',
-          lastPaymentError: paymentIntent.last_payment_error?.message || 'Pago fallido',
-          updatedAt: serverTimestamp(),
-        });
-        console.log('⚠️ Pago fallido para óptica:', opticaId);
-      }
-    }
-
-    // Retornar 200 para confirmar recepción
-    return NextResponse.json({ received: true });
+    // Devolvemos 200 OK para que Stripe sepa que lo recibimos correctamente
+    return new NextResponse("OK", { status: 200 });
 
   } catch (error: any) {
-    console.error('❌ Error en webhook de Stripe:', error);
-    return NextResponse.json(
-      { error: 'Error procesando webhook' },
-      { status: 500 }
-    );
+    console.error("❌ Error procesando el evento del webhook:", error);
+    // ⚠️ IMPORTANTE: Si falla, NO lo marcamos como procesado. 
+    // Así Stripe podrá reintentar enviar el evento más tarde.
+    return new NextResponse("Error interno del servidor", { status: 500 });
   }
 }
