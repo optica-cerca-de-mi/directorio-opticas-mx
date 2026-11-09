@@ -1,9 +1,7 @@
 import { MetadataRoute } from 'next';
-// Importamos nuestra instancia segura de Firebase Admin
-import { db } from '@/lib/firebase-admin'; 
+import { db } from '@/lib/firebase-admin';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  // URL base de tu sitio (ajústala si ya tienes tu dominio propio)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://directorio-opticas-mx.vercel.app';
 
   // 1. 🏠 PÁGINAS ESTÁTICAS (Alta prioridad)
@@ -12,13 +10,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: baseUrl,
       lastModified: new Date(),
       changeFrequency: 'daily',
-      priority: 1.0, // La Home es lo más importante
+      priority: 1.0,
     },
     {
       url: `${baseUrl}/opticas`,
       lastModified: new Date(),
       changeFrequency: 'daily',
-      priority: 0.9, // El directorio cambia seguido
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/registro`,
@@ -38,33 +36,64 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${baseUrl}/ayuda`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/contacto-publicidad`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.4,
+    },
   ];
 
   // 2. 🏪 PÁGINAS DINÁMICAS (Fichas de Ópticas)
   let dynamicPages: MetadataRoute.Sitemap = [];
 
   try {
-    // Buscamos solo las ópticas que están activas en Firebase
-    const snapshot = await db.collection('opticas').where('estado', '==', 'activa').get();
-    
-    dynamicPages = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      // Usamos la fecha de última actualización si existe, si no, la fecha actual
-      const lastMod = data.updatedAt ? new Date(data.updatedAt) : new Date();
+    // ✅ Validación: verificar que db esté disponible
+    if (!db) {
+      console.warn('⚠️ OptiBoost: Firebase Admin no está disponible. Sitemap sin fichas dinámicas.');
+    } else {
+      // ✅ Consulta permisiva: trae todas las ópticas (sin filtro de estado)
+      const snapshot = await db.collection('opticas').get();
       
-      return {
-        url: `${baseUrl}/opticas/${doc.id}`,
-        lastModified: lastMod,
-        changeFrequency: 'weekly' as const, // Google debe revisarlas cada semana
-        priority: 0.8, // Alta prioridad porque son el core del negocio
-      };
-    });
+      dynamicPages = snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          
+          // Saltar ópticas sin nombre (datos corruptos)
+          if (!data.nombre) return null;
+          
+          const lastMod = data.updatedAt 
+            ? new Date(data.updatedAt) 
+            : data.fechaCreacion 
+              ? data.fechaCreacion.toDate() 
+              : new Date();
+          
+          // Prioridad basada en el plan (Premium+ > Premium > Free)
+          let priority = 0.6;
+          if (data.plan === 'premium_plus') priority = 0.9;
+          else if (data.plan === 'premium') priority = 0.8;
+          
+          return {
+            url: `${baseUrl}/opticas/${doc.id}`,
+            lastModified: lastMod,
+            changeFrequency: 'weekly' as const,
+            priority,
+          };
+        })
+        .filter((page): page is MetadataRoute.Sitemap[0] => page !== null);
 
-    console.log(`✅ OptiBoost: Sitemap generado con ${dynamicPages.length} ópticas.`);
+      console.log(`✅ OptiBoost: Sitemap generado con ${dynamicPages.length} ópticas.`);
+    }
   } catch (error) {
     console.error('❌ OptiBoost: Error al generar el sitemap dinámico:', error);
   }
 
-  // 3. 🚀 Unimos todo y se lo entregamos a Next.js
+  // 3. 🚀 Unimos todo
   return [...staticPages, ...dynamicPages];
 }
