@@ -14,7 +14,6 @@ import { db } from "@/lib/firebase";
 import { useOptiRank } from "@/hooks/useOptiRank";
 import { estaAbiertaEn } from "@/lib/ranking-engine";
 import { Optica } from "@/types/optica";
-import BannerDinamico from "@/components/BannerDinamico";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { AdSlot } from "@/components/OptiAdBoost";
 import FooterPublico from "@/components/FooterPublico";
