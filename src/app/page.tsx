@@ -17,6 +17,7 @@ import { Optica } from "@/types/optica";
 import { AdSlot } from "@/components/OptiAdBoost";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import FooterPublico from "@/components/FooterPublico";
+import BannerDinamico from "@/components/BannerDinamico";
 
 interface OpticaTop {
   id: string;
@@ -513,8 +514,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <BannerDinamico ubicacion="home-footer" />
 
       {/* CTA FINAL */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
