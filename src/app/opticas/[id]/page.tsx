@@ -13,6 +13,7 @@ import {
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getPlanConfig, PlanType } from "@/lib/plans-config";
+import JsonLdOptica from '@/components/SEO/JsonLdOptica';
 
 // ✅ NUEVO: Helper para obtener URL embed de YouTube/Vimeo
 function getVideoEmbedUrl(url: string): string | null {
@@ -383,6 +384,34 @@ export default function FichaOptica() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+return (
+  <div className="min-h-screen bg-gray-50">
+    {/* ✅ JSON-LD Schema.org para SEO */}
+    <JsonLdOptica
+      nombre={nombreMostrar}
+      descripcion={optica.descripcion}
+      telefono={optica.telefono}
+      whatsapp={optica.whatsapp}
+      email={optica.email}
+      sitioWeb={optica.sitioWeb}
+      direccion={optica.direccion}
+      ciudad={optica.ciudad}
+      estado={optica.estado}
+      cp={optica.cp}
+      horarios={optica.horarios}
+      calificacionGoogle={optica.calificacionGoogle}
+      numResenas={optica.numResenas}
+      fotos={optica.fotos}
+      logo={optica.logo}
+      facebook={optica.facebook}
+      instagram={optica.instagram}
+      especialidades={optica.especialidades}
+      urlGoogleMaps={optica.urlGoogleMaps}
+    />
+
+    {/* Header con navegación */}
+    <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      ...
       {/* Header con navegación */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
