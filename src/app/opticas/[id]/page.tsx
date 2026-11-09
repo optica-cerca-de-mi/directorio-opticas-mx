@@ -14,6 +14,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getPlanConfig, PlanType } from "@/lib/plans-config";
 import JsonLdOptica from '@/components/SEO/JsonLdOptica';
+import { AdSlot } from "@/components/OptiAdBoost";
+import FooterPublico from "@/components/FooterPublico";
 
 // ✅ Helper para obtener URL embed de YouTube/Vimeo
 function getVideoEmbedUrl(url: string): string | null {
@@ -512,6 +514,9 @@ export default function FichaOptica() {
               </div>
             </div>
 
+            {/* ✅ OptiAdBoost: Primer espacio solo para ópticas Free */}
+            {optica.plan === 'free' && <AdSlot slotId="ficha-free-after-hero" />}
+
             {/* SECCIÓN: CONTENIDO ENRIQUECIDO */}
             {optica.bloquesContenido && optica.bloquesContenido.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 space-y-12">
@@ -719,6 +724,10 @@ export default function FichaOptica() {
                 </div>
               </div>
             )}
+
+            {/* ✅ OptiAdBoost: Segundo espacio solo para ópticas Free */}
+            {optica.plan === 'free' && <AdSlot slotId="ficha-free-before-footer" />}
+
           </div>
 
           {/* Columna lateral (1/3) */}
@@ -776,6 +785,7 @@ export default function FichaOptica() {
           </div>
         </div>
       </div>
+      <FooterPublico />
     </div>
   );
 }

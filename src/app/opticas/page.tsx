@@ -6,10 +6,12 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { AdSlot } from "@/components/OptiAdBoost";
 import { useOptiRank } from "@/hooks/useOptiRank";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { estaAbiertaEn } from "@/lib/ranking-engine";
 import { Optica } from "@/types/optica";
+import FooterPublico from "@/components/FooterPublico";
 import {
   MapPin,
   Search,
@@ -459,6 +461,10 @@ export default function OpticasPage() {
 
           {/* Grid de ópticas */}
           <div className="flex-1">
+            
+            {/* ✅ OptiAdBoost: Espacio publicitario (Posición correcta) */}
+            <AdSlot slotId="opticas-list-top" />
+
             {opticasFinales.length === 0 ? (
               <div className="card-premium p-12 text-center">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -646,6 +652,7 @@ export default function OpticasPage() {
           </div>
         </div>
       </div>
+      <FooterPublico />
     </main>
   );
 }

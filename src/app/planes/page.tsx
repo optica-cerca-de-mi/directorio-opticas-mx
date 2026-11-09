@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Check, Crown, Star, Store, ArrowRight, Shield, Zap, Headphones } from "lucide-react";
+import { AdSlot } from "@/components/OptiAdBoost";
+import FooterPublico from "@/components/FooterPublico";
 
 export const metadata = {
   title: "Planes y Precios | La Óptica Cerca de mí",
@@ -118,7 +120,7 @@ export default function PlanesPage() {
             Elige el plan perfecto para tu óptica
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto mb-8">
-            Desde presencia básica hasta experiencia premium. Todos los planes incluyen 
+            Desde presencia básica hasta experiencia premium. Todos los planes incluyen
             acceso al directorio #1 de ópticas en México.
           </p>
           <div className="flex items-center justify-center gap-6 text-sm">
@@ -351,6 +353,9 @@ export default function PlanesPage() {
         </div>
       </section>
 
+      {/* ✅ OptiAdBoost: Espacio publicitario B2B (Alta intención) */}
+      <AdSlot slotId="planes-mid" />
+
       {/* CTA Final */}
       <section className="py-16 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -369,6 +374,7 @@ export default function PlanesPage() {
           </Link>
         </div>
       </section>
+      <FooterPublico />
     </main>
   );
 }

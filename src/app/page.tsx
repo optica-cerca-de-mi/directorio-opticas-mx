@@ -14,8 +14,9 @@ import { db } from "@/lib/firebase";
 import { useOptiRank } from "@/hooks/useOptiRank";
 import { estaAbiertaEn } from "@/lib/ranking-engine";
 import { Optica } from "@/types/optica";
-import BannerDinamico from "@/components/BannerDinamico";
+import { AdSlot } from "@/components/OptiAdBoost";
 import { useUserLocation } from "@/hooks/useUserLocation";
+import FooterPublico from "@/components/FooterPublico";
 
 interface OpticaTop {
   id: string;
@@ -71,27 +72,6 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
   return (
     <div ref={ref} className="text-3xl md:text-4xl font-bold text-gold-400">
       {count}{suffix}
-    </div>
-  );
-}
-
-function GoogleAdBanner({ slot }: { slot: string }) {
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
-        <div className="text-center py-2 bg-gray-100 border-b border-gray-200">
-          <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Publicidad</p>
-        </div>
-        <div className="min-h-[90px] flex items-center justify-center p-4">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Globe className="w-6 h-6 text-gray-400" />
-            </div>
-            <p className="text-xs text-gray-400">Espacio publicitario - Google Ads</p>
-            <p className="text-[10px] text-gray-300 mt-1">Slot: {slot}</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -448,7 +428,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <GoogleAdBanner slot="home-between-1" />
+      <AdSlot slotId="home-between-1" />
 
       {/* BENEFICIOS */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-50 to-blue-50">
@@ -553,6 +533,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      <FooterPublico />
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { MapPin, Star, Award, BadgeCheck, Search, ArrowLeft } from "lucide-react
 import Link from "next/link";
 import { getAllOpticas } from "@/data/mock-opticas";
 import type { Metadata } from "next";
+import { AdSlot } from "@/components/OptiAdBoost";
 
 // Mapeo de estados de México a slugs
 const estadosMap: Record<string, string> = {
@@ -39,6 +40,8 @@ const estadosMap: Record<string, string> = {
   "Yucatán": "yucatan",
   "Zacatecas": "zacatecas",
 };
+
+<AdSlot slotId="estado-detalle-mid" />
 
 export async function generateStaticParams() {
   return Object.values(estadosMap).map((estado) => ({ estado }));

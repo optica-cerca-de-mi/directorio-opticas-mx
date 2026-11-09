@@ -1,6 +1,8 @@
 import { MapPin, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { AdSlot } from "@/components/OptiAdBoost";
+import FooterPublico from "@/components/FooterPublico";
 
 export const metadata: Metadata = {
   title: "Ópticas por Estado en México | Directorio completo",
@@ -61,6 +63,8 @@ export default function EstadosPage() {
         </div>
       </section>
 
+ <AdSlot slotId="estados-list-top" />
+
       {/* Grid de estados */}
       <section className="py-12 md:py-16">
         <div className="container-premium">
@@ -94,6 +98,7 @@ export default function EstadosPage() {
           </div>
         </div>
       </section>
+      <FooterPublico />
     </main>
   );
 }
