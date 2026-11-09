@@ -17,6 +17,7 @@ import {
   Share2,
   Camera,
   FileText,
+  Calendar, // ✅ NUEVO: Ícono para la agenda
 } from "lucide-react";
 
 export default function InfoPage() {
@@ -41,6 +42,7 @@ export default function InfoPage() {
     instagram: "",
     descripcion: "",
     horarios: "",
+    linkAgenda: "", // ✅ NUEVO: Link externo de agenda (Calendly, Doctoralia, etc.)
   });
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export default function InfoPage() {
             instagram: data.instagram || "",
             descripcion: data.descripcion || "",
             horarios: data.horarios || "",
+            linkAgenda: data.linkAgenda || "", // ✅ NUEVO: Cargar dato existente
           });
         }
       } catch (err) {
@@ -87,10 +90,10 @@ export default function InfoPage() {
 
     try {
       const docRef = doc(db, "opticas", opticaId);
-await setDoc(docRef, {
-  ...formData,
-  updatedAt: new Date().toISOString(),
-}, { merge: true });
+      await setDoc(docRef, {
+        ...formData,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
       setMensaje("¡Información actualizada correctamente!");
     } catch (err) {
       console.error("Error al guardar:", err);
@@ -219,11 +222,11 @@ await setDoc(docRef, {
           </div>
         </div>
 
-        {/* Contacto */}
+        {/* Contacto y Agenda */}
         <div className="card-premium p-6">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2">
             <Phone className="w-5 h-5" />
-            Contacto
+            Contacto y Agenda
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -251,6 +254,24 @@ await setDoc(docRef, {
                 placeholder="5551234567"
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
+            </div>
+
+            {/* ✅ NUEVO: Campo para Link de Agenda Externa */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-navy-700" />
+                Link de Agenda Externa (Opcional)
+              </label>
+              <input
+                type="url"
+                value={formData.linkAgenda}
+                onChange={(e) => handleChange("linkAgenda", e.target.value)}
+                placeholder="https://calendly.com/tu-optica o https://doctoralia.com.mx/..."
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Si usas Calendly, Doctoralia u otra plataforma, pega el link aquí para que tus clientes reserven directamente.
+              </p>
             </div>
           </div>
         </div>

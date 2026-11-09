@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  Star, MapPin, Phone, MessageCircle, Globe, Clock, 
+import {
+  Star, MapPin, Phone, MessageCircle, Globe, Clock,
   ArrowLeft, ShieldCheck, ExternalLink, Loader2,
   ChevronRight, Calendar, Navigation, Tag, TrendingUp,
   HelpCircle, Megaphone, Image as ImageIcon, Video,
@@ -35,6 +35,7 @@ interface OpticaData {
   email?: string;
   telefono?: string;
   whatsapp?: string;
+  linkAgenda?: string; // ✅ NUEVO: Link externo de agenda
   direccion?: string;
   ciudad?: string;
   estado?: string;
@@ -68,7 +69,7 @@ interface OpticaData {
   fechaRegistro?: string;
   fotos?: Array<{ url: string; caption?: string }>;
   videos?: string[];
-  videoCloudinary?: string; // ✅ NUEVO
+  videoCloudinary?: string;
   hero?: {
     imagen: string;
     colorOverlay: string;
@@ -114,9 +115,9 @@ interface OpticaData {
   }>;
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // COMPONENTES DE BLOQUES DE CONTENIDO
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 function BloqueTexto({ datos }: { datos: any }) {
   return (
@@ -129,7 +130,7 @@ function BloqueTexto({ datos }: { datos: any }) {
 
 function BloqueImagenTexto({ datos }: { datos: any }) {
   const layoutClass = datos.layout === 'derecha' ? 'flex-row-reverse' : 'flex-row';
-  
+
   return (
     <div className={`flex ${layoutClass} gap-8 items-center`}>
       {datos.imagen && (
@@ -248,37 +249,37 @@ function BloqueContenidoRenderer({ bloque }: { bloque: any }) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // FUNCIÓN HELPER: Transformar URL de Google Maps a embed
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 function getGoogleMapsEmbedUrl(url: string): string | null {
   if (!url) return null;
-  
+
   try {
     if (url.includes('/embed')) {
       return url;
     }
-    
+
     const coordsMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     if (coordsMatch) {
       const lat = coordsMatch[1];
       const lng = coordsMatch[2];
       return `https://maps.google.com/maps?q=${lat},${lng}&output=embed`;
     }
-    
+
     const queryMatch = url.match(/[?&]q=([^&]+)/);
     if (queryMatch) {
       const query = decodeURIComponent(queryMatch[1]);
       return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
     }
-    
+
     const placeMatch = url.match(/\/place\/([^/@]+)/);
     if (placeMatch) {
       const place = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
       return `https://maps.google.com/maps?q=${encodeURIComponent(place)}&output=embed`;
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error transformando URL de Google Maps:', error);
@@ -286,9 +287,9 @@ function getGoogleMapsEmbedUrl(url: string): string | null {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 export default function FichaOptica() {
   const params = useParams();
@@ -308,11 +309,11 @@ export default function FichaOptica() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const nombre = data.nombre || data.nombreComercial || "Óptica";
-          
-          setOptica({ 
-            id: docSnap.id, 
+
+          setOptica({
+            id: docSnap.id,
             ...data,
-            nombre 
+            nombre
           } as OpticaData);
         } else {
           setError("Óptica no encontrada");
@@ -330,7 +331,7 @@ export default function FichaOptica() {
 
   const estaAbiertaAhora = () => {
     if (!optica?.horarios) return null;
-    
+
     const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const diaHoy = diasSemana[new Date().getDay()];
     const horario = optica.horarios.find(h => h.dia === diaHoy);
@@ -348,7 +349,7 @@ export default function FichaOptica() {
       return { abierta: false, texto: `Cierra a las ${horario.cierre}` };
     }
 
-    return { abierta: true, texto: `Abierto · Cierra a las ${horario.cierre}` };
+    return { abierta: true, texto: `Abierto - Cierra a las ${horario.cierre}` };
   };
 
   const estadoHorario = estaAbiertaAhora();
@@ -398,12 +399,12 @@ export default function FichaOptica() {
       {/* Hero personalizado (si existe) */}
       {optica.hero?.imagen && (
         <section className="relative h-[500px] overflow-hidden">
-          <img 
-            src={optica.hero.imagen} 
-            alt="Hero" 
+          <img
+            src={optica.hero.imagen}
+            alt="Hero"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div 
+          <div
             className="absolute inset-0"
             style={{ backgroundColor: optica.hero.colorOverlay || '#000000', opacity: 0.6 }}
           />
@@ -427,17 +428,17 @@ export default function FichaOptica() {
       {/* Contenido principal */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Columna principal (2/3) */}
           <div className="lg:col-span-2 space-y-8">
-            
+
             {/* Información básica */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
               {/* Logo */}
               {optica.logo && (
                 <div className="mb-6">
-                  <img 
-                    src={optica.logo} 
+                  <img
+                    src={optica.logo}
                     alt={`Logo de ${nombreMostrar}`}
                     className="w-24 h-24 object-contain rounded-lg border border-gray-200"
                   />
@@ -468,11 +469,11 @@ export default function FichaOptica() {
                 <div className="flex items-center gap-3 mb-6">
                   <div className="flex items-center gap-1">
                     {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
+                      <Star
+                        key={i}
                         className={`w-6 h-6 ${
-                          i < Math.floor(optica.calificacionGoogle!) 
-                            ? "text-amber-500 fill-current" 
+                          i < Math.floor(optica.calificacionGoogle!)
+                            ? "text-amber-500 fill-current"
                             : "text-gray-300"
                         }`}
                       />
@@ -485,8 +486,8 @@ export default function FichaOptica() {
 
               {estadoHorario && (
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg mb-6 ${
-                  estadoHorario.abierta 
-                    ? "bg-green-50 text-green-700 border border-green-200" 
+                  estadoHorario.abierta
+                    ? "bg-green-50 text-green-700 border border-green-200"
                     : "bg-red-50 text-red-700 border border-red-200"
                 }`}>
                   <Clock className="w-4 h-4" />
@@ -547,60 +548,63 @@ export default function FichaOptica() {
                 </div>
               )}
 
-              <div className={`grid gap-3 pt-6 border-t border-gray-100 ${
-                planConfig?.limites.incluyeBotonWaze ? "grid-cols-2 md:grid-cols-5" : "grid-cols-2 md:grid-cols-4"
+              {/* ✅ SECCIÓN DE AGENDA MEJORADA */}
+              <div className="pt-6 border-t border-gray-100 space-y-3">
+                <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-navy-700" />
+                  Agendar Cita
+                </p>
+                <div className={`grid gap-3 ${optica.linkAgenda ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+                  {/* Botón WhatsApp con mensaje pre-llenado */}
+                  {planConfig?.limites.incluyeBotonWhatsApp && optica.whatsapp && (
+                    <a
+                      href={`https://wa.me/52${optica.whatsapp}?text=${encodeURIComponent("Hola, vi su óptica en el directorio y me gustaría agendar una cita para un examen de la vista.")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors shadow-sm"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Agendar por WhatsApp
+                    </a>
+                  )}
+
+                  {/* Botón Agenda Externa (si existe) */}
+                  {optica.linkAgenda && (
+                    <a
+                      href={optica.linkAgenda}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-semibold transition-colors shadow-sm"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Reservar en línea
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Resto de botones de contacto */}
+              <div className={`grid gap-3 pt-4 border-t border-gray-100 ${
+                planConfig?.limites.incluyeBotonWaze ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 md:grid-cols-3"
               }`}>
-                {planConfig?.limites.incluyeBotonWhatsApp && optica.whatsapp && (
-                  <a
-                    href={`https://wa.me/52${optica.whatsapp}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    WhatsApp
-                  </a>
-                )}
                 {planConfig?.limites.incluyeBotonLlamar && optica.telefono && (
-                  <a
-                    href={`tel:${optica.telefono.replace(/\s/g, "")}`}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-                  >
-                    <Phone className="w-4 h-4" />
-                    Llamar
+                  <a href={`tel:${optica.telefono.replace(/\s/g, "")}`} className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                    <Phone className="w-4 h-4" /> Llamar
                   </a>
                 )}
                 {planConfig?.limites.incluyeBotonWaze && optica.direccion && (
-                  <a
-                    href={`https://waze.com/ul?q=${encodeURIComponent(optica.direccion)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    Waze
+                  <a href={`https://waze.com/ul?q=${encodeURIComponent(optica.direccion)}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors">
+                    <Navigation className="w-4 h-4" /> Waze
                   </a>
                 )}
                 {planConfig?.limites.incluyeBotonMaps && optica.urlGoogleMaps && (
-                  <a
-                    href={optica.urlGoogleMaps}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-semibold transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    Maps
+                  <a href={optica.urlGoogleMaps} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-semibold transition-colors">
+                    <ExternalLink className="w-4 h-4" /> Maps
                   </a>
                 )}
                 {planConfig?.limites.incluyeBotonSitioWeb && optica.sitioWeb && (
-                  <a
-                    href={optica.sitioWeb.startsWith('http') ? optica.sitioWeb : `https://${optica.sitioWeb}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-semibold transition-colors"
-                  >
-                    <Globe className="w-4 h-4" />
-                    Sitio web
+                  <a href={optica.sitioWeb.startsWith('http') ? optica.sitioWeb : `https://${optica.sitioWeb}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-semibold transition-colors">
+                    <Globe className="w-4 h-4" /> Sitio web
                   </a>
                 )}
               </div>
@@ -626,32 +630,31 @@ export default function FichaOptica() {
                   <Video className="w-6 h-6" />
                   Videos
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Videos de YouTube/Vimeo */}
                   {optica.videos?.map((videoUrl, i) => {
                     const embedUrl = getVideoEmbedUrl(videoUrl);
                     if (!embedUrl) return null;
-                    
+
                     return (
                       <div key={i} className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
-                        <iframe 
-                          src={embedUrl} 
-                          className="w-full h-full" 
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full"
                           allowFullScreen
                           title={`Video ${i + 1}`}
                         />
                       </div>
                     );
                   })}
-                  
-                  {/* Video subido directamente a Cloudinary */}
+
                   {/* Video subido directamente a Cloudinary */}
                   {optica.videoCloudinary && typeof optica.videoCloudinary === 'object' && 'url' in optica.videoCloudinary && (
                     <div className="aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
-                      <video 
-                        src={optica.videoCloudinary.url} 
-                        controls 
+                      <video
+                        src={optica.videoCloudinary.url}
+                        controls
                         className="w-full h-full"
                         poster={optica.fotos?.[0]?.url}
                       />
@@ -664,14 +667,14 @@ export default function FichaOptica() {
             {/* Mapa de Google Maps con fallback */}
             {optica.urlGoogleMaps && (() => {
               const embedUrl = getGoogleMapsEmbedUrl(optica.urlGoogleMaps);
-              
+
               return (
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
                   <h2 className="text-2xl font-bold text-navy-900 font-display mb-6 flex items-center gap-2">
                     <MapPin className="w-6 h-6" />
                     Ubicación
                   </h2>
-                  
+
                   {embedUrl ? (
                     <div className="aspect-video rounded-xl overflow-hidden border border-gray-200">
                       <iframe
@@ -719,8 +722,8 @@ export default function FichaOptica() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {optica.fotos.slice(0, planConfig.limites.maxFotos).map((foto, i) => (
                     <div key={i} className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={foto.url} 
+                      <img
+                        src={foto.url}
                         alt={foto.caption || `Foto ${i + 1}`}
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       />
@@ -829,11 +832,11 @@ export default function FichaOptica() {
                     <div className="text-4xl font-bold text-navy-900">{optica.resenasGoogle.calificacion}</div>
                     <div className="flex items-center justify-center gap-1 mt-1">
                       {[...Array(5)].map((_, i) => (
-                        <Star 
-                          key={i} 
+                        <Star
+                          key={i}
                           className={`w-4 h-4 ${
-                            i < Math.floor(optica.resenasGoogle!.calificacion) 
-                              ? "text-amber-500 fill-current" 
+                            i < Math.floor(optica.resenasGoogle!.calificacion)
+                              ? "text-amber-500 fill-current"
                               : "text-gray-300"
                           }`}
                         />
@@ -864,11 +867,11 @@ export default function FichaOptica() {
                           </div>
                           <div className="flex items-center gap-1">
                             {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
+                              <Star
+                                key={i}
                                 className={`w-4 h-4 ${
-                                  i < resena.calificacion 
-                                    ? "text-amber-500 fill-current" 
+                                  i < resena.calificacion
+                                    ? "text-amber-500 fill-current"
                                     : "text-gray-300"
                                 }`}
                               />
@@ -931,10 +934,10 @@ export default function FichaOptica() {
                   {optica.horarios.map((horario, i) => {
                     const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
                     const esHoy = diasSemana[new Date().getDay()] === horario.dia;
-                    
+
                     return (
-                      <div 
-                        key={i} 
+                      <div
+                        key={i}
                         className={`flex items-center justify-between p-3 rounded-lg ${
                           esHoy ? "bg-navy-50 border border-navy-200" : "bg-gray-50"
                         }`}
