@@ -9,8 +9,8 @@ cloudinary.config({
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 
-        !process.env.CLOUDINARY_API_KEY || 
+    if (!process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+        !process.env.CLOUDINARY_API_KEY ||
         !process.env.CLOUDINARY_API_SECRET) {
       console.error('❌ Faltan variables de entorno de Cloudinary');
       return NextResponse.json(
@@ -25,7 +25,25 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { success: false, error: 'No file provided' },
+        { success: false, error: 'No se proporcionó ningún archivo' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ VALIDACIÓN DE TIPO DE ARCHIVO EN EL BACKEND (Seguridad)
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedVideoTypes = ['video/mp4', 'video/webm'];
+
+    if (resourceType === 'image' && !allowedImageTypes.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: 'Tipo de archivo no permitido. Solo se aceptan imágenes JPG, PNG o WEBP.' },
+        { status: 400 }
+      );
+    }
+
+    if (resourceType === 'video' && !allowedVideoTypes.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: 'Tipo de archivo no permitido. Solo se aceptan videos MP4 o WEBM.' },
         { status: 400 }
       );
     }
@@ -34,9 +52,9 @@ export async function POST(request: NextRequest) {
     const maxSize = resourceType === 'video' ? 100 * 1024 * 1024 : 5 * 1024 * 1024; // 100MB video, 5MB imagen
     if (file.size > maxSize) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `El archivo es demasiado grande. Máximo ${resourceType === 'video' ? '100MB' : '5MB'} permitido.` 
+        {
+          success: false,
+          error: `El archivo es demasiado grande. Máximo ${resourceType === 'video' ? '100MB' : '5MB'} permitido.`
         },
         { status: 400 }
       );
@@ -93,7 +111,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error uploading:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to upload' },
+      { success: false, error: 'Error interno al subir el archivo' },
       { status: 500 }
     );
   }
