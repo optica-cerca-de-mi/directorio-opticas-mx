@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Mail, Phone, ShieldCheck, Facebook, Instagram } from "lucide-react";
+import { Mail, Phone, ShieldCheck } from "lucide-react";
 import { AdSlot } from "@/components/OptiAdBoost";
 
 export default function FooterPublico() {
@@ -60,12 +60,13 @@ export default function FooterPublico() {
                 <Phone className="w-4 h-4 text-gold-400" />
                 <span>Soporte para ópticas</span>
               </li>
+              {/* Redes sociales - Sin iconos por ahora */}
               <li className="flex gap-4 mt-4">
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  <Facebook className="w-5 h-5" />
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gold-400 transition-colors text-sm">
+                  Facebook
                 </a>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gold-400 transition-colors">
-                  <Instagram className="w-5 h-5" />
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gold-400 transition-colors text-sm">
+                  Instagram
                 </a>
               </li>
             </ul>
