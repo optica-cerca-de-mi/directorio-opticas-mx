@@ -434,14 +434,15 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-base font-bold text-navy-900 font-display">Franklin</p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                    Búsqueda Inteligente
-                  </p>
-                </div>
-              </div>
+<div className="flex-1 min-w-0 text-left">
+  <p className="text-base font-bold text-navy-900 font-display">
+    Franklin <span className="text-xs font-normal text-gray-500">AI</span>
+  </p>
+  <p className="text-[10px] text-gray-500 flex items-center gap-1">
+    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+    Tecnología impulsada por Qwen AI
+  </p>
+</div>
 
               {/* Input y Botón - Stack en móvil, row en desktop */}
               <div className="flex flex-col md:flex-row gap-3">
