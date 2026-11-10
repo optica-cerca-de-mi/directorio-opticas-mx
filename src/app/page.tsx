@@ -178,133 +178,142 @@ export default function HomePage() {
   const top3 = opticasRanking.slice(0, 3);
 
   // ✅ NUEVO: Procesamiento conversacional de Franklin
-  const procesarConsultaFranklin = () => {
-    if (!franklinQuery.trim() || franklinState === "thinking") return;
+const procesarConsultaFranklin = () => {
+  if (!franklinQuery.trim() || franklinState === "thinking") return;
 
-    const query = franklinQuery.toLowerCase();
-    setFranklinState("thinking");
-    setFranklinMessages([]);
-    setFranklinResults([]);
-    setFranklinSummary("");
+  const query = franklinQuery.toLowerCase();
+  setFranklinState("thinking");
+  setFranklinMessages([]);
+  setFranklinResults([]);
+  setFranklinSummary("");
 
-    const addMessage = (text: string, type: FranklinMessage["type"], delay: number) => {
-      return new Promise<void>((resolve) => {
-        setTimeout(() => {
-          setFranklinMessages((prev) => [...prev, { id: Date.now() + Math.random(), text, type }]);
-          resolve();
-        }, delay);
-      });
-    };
-
-    const ejecutarBusqueda = async () => {
-      // Paso 1: Saludo
-      await addMessage("Entendido, déjame analizar tu búsqueda...", "thinking", 300);
-
-      // Paso 2: Detección de ciudad
-      let ciudadDetectada = "";
-      const ciudades = [
-        { nombre: "Cuautitlán Izcalli", keywords: ["cuautitlán", "izcalli", "cuautitlan"] },
-        { nombre: "CDMX", keywords: ["cdmx", "ciudad de méxico", "ciudad de mexico", "méxico", "mexico", "cdmx"] },
-        { nombre: "Estado de México", keywords: ["estado de méxico", "edomex", "estado de mexico"] },
-        { nombre: "Guadalajara", keywords: ["guadalajara", "jalisco"] },
-        { nombre: "Monterrey", keywords: ["monterrey", "nuevo león", "nuevo leon"] },
-      ];
-
-      for (const c of ciudades) {
-        if (c.keywords.some((k) => query.includes(k))) {
-          ciudadDetectada = c.nombre;
-          break;
-        }
-      }
-
-      await addMessage(
-        ciudadDetectada
-          ? `📍 Buscando ópticas en ${ciudadDetectada}...`
-          : "📍 Buscando ópticas cerca de ti...",
-        "thinking",
-        600
-      );
-
-      // Paso 3: Detección de especialidad
-      let especialidadDetectada = "";
-      for (const esp of ESPECIALIDADES) {
-        if (query.includes(esp.nombre.toLowerCase()) || query.includes(esp.slug)) {
-          especialidadDetectada = esp.nombre;
-          break;
-        }
-      }
-
-      if (especialidadDetectada) {
-        await addMessage(`🔍 Filtrando por especialidad: ${especialidadDetectada}...`, "thinking", 500);
-      } else {
-        await addMessage("🔍 Analizando especialidades disponibles...", "thinking", 500);
-      }
-
-      // Paso 4: Detección de seguro
-      let seguroDetectado = "";
-      const seguros = ["gnp", "axa", "metlife", "seguro", "seguros"];
-      for (const s of seguros) {
-        if (query.includes(s)) {
-          seguroDetectado = s.toUpperCase();
-          break;
-        }
-      }
-
-      if (seguroDetectado) {
-        await addMessage(`💼 Verificando ópticas que acepten ${seguroDetectado}...`, "thinking", 500);
-      }
-
-      // Paso 5: Filtrado real
-      await addMessage("✨ Comparando calificaciones y horarios...", "thinking", 500);
-
-      let resultados = [...opticas];
-
-      if (ciudadDetectada) {
-        resultados = resultados.filter(
-          (o) =>
-            (o.ciudad || "").toLowerCase().includes(ciudadDetectada.toLowerCase()) ||
-            (o.estado || "").toLowerCase().includes(ciudadDetectada.toLowerCase())
-        );
-      }
-
-      if (especialidadDetectada) {
-        resultados = resultados.filter((o) =>
-          (o.especialidades || []).some((e) => e.toLowerCase().includes(especialidadDetectada.toLowerCase()))
-        );
-      }
-
-      if (seguroDetectado) {
-        resultados = resultados.filter((o) =>
-          (o.segurosAceptados || []).some((s) => s.toLowerCase().includes(seguroDetectado.toLowerCase()))
-        );
-      }
-
-      // Si no hay resultados específicos, mostrar top 3
-      if (resultados.length === 0) {
-        resultados = opticasRanking.slice(0, 3);
-      } else {
-        resultados = resultados.slice(0, 6);
-      }
-
-      // Paso 6: Resultado final
-      const resumen = ciudadDetectada
-        ? `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} en ${ciudadDetectada}${especialidadDetectada ? ` especializadas en ${especialidadDetectada}` : ""}!`
-        : `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} que coinciden con tu búsqueda!`;
-
-      await addMessage(resumen, "success", 600);
-
-      setFranklinResults(resultados);
-      setFranklinSummary(resumen);
-      setFranklinState("done");
-
-      // Scroll suave al panel de resultados
+  // ✅ NUEVO: Cada mensaje aparece como "thinking" y se auto-transforma en "success"
+  const addMessage = (text: string, delay: number, displayDuration: number = 1100) => {
+    return new Promise<void>((resolve) => {
+      const msgId = Date.now() + Math.random();
       setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 300);
-    };
-
-    ejecutarBusqueda();
+        setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
+        
+        // Después de displayDuration, transformar a success (check verde)
+        setTimeout(() => {
+          setFranklinMessages((prev) => 
+            prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
+          );
+          resolve();
+        }, displayDuration);
+      }, delay);
+    });
   };
+
+  const ejecutarBusqueda = async () => {
+    // Paso 1: Saludo
+    await addMessage("Entendido, déjame analizar tu búsqueda...", 300);
+
+    // Paso 2: Detección de ciudad
+    let ciudadDetectada = "";
+    const ciudades = [
+      { nombre: "Cuautitlán Izcalli", keywords: ["cuautitlán", "izcalli", "cuautitlan"] },
+      { nombre: "CDMX", keywords: ["cdmx", "ciudad de méxico", "ciudad de mexico", "méxico", "mexico"] },
+      { nombre: "Estado de México", keywords: ["estado de méxico", "edomex", "estado de mexico"] },
+      { nombre: "Guadalajara", keywords: ["guadalajara", "jalisco"] },
+      { nombre: "Monterrey", keywords: ["monterrey", "nuevo león", "nuevo leon"] },
+    ];
+
+    for (const c of ciudades) {
+      if (c.keywords.some((k) => query.includes(k))) {
+        ciudadDetectada = c.nombre;
+        break;
+      }
+    }
+
+    await addMessage(
+      ciudadDetectada
+        ? `Buscando ópticas en ${ciudadDetectada}...`
+        : "Buscando ópticas cerca de ti...",
+      400
+    );
+
+    // Paso 3: Detección de especialidad
+    let especialidadDetectada = "";
+    for (const esp of ESPECIALIDADES) {
+      if (query.includes(esp.nombre.toLowerCase()) || query.includes(esp.slug)) {
+        especialidadDetectada = esp.nombre;
+        break;
+      }
+    }
+
+    if (especialidadDetectada) {
+      await addMessage(`Filtrando por especialidad: ${especialidadDetectada}...`, 500);
+    } else {
+      await addMessage("Analizando especialidades disponibles...", 500);
+    }
+
+    // Paso 4: Detección de seguro
+    let seguroDetectado = "";
+    const seguros = ["gnp", "axa", "metlife", "seguro", "seguros"];
+    for (const s of seguros) {
+      if (query.includes(s)) {
+        seguroDetectado = s.toUpperCase();
+        break;
+      }
+    }
+
+    if (seguroDetectado) {
+      await addMessage(`Verificando ópticas que acepten ${seguroDetectado}...`, 500);
+    }
+
+    // Paso 5: Filtrado real
+    await addMessage("Comparando calificaciones y horarios...", 600);
+
+    let resultados = [...opticas];
+
+    if (ciudadDetectada) {
+      resultados = resultados.filter(
+        (o) =>
+          (o.ciudad || "").toLowerCase().includes(ciudadDetectada.toLowerCase()) ||
+          (o.estado || "").toLowerCase().includes(ciudadDetectada.toLowerCase())
+      );
+    }
+
+    if (especialidadDetectada) {
+      resultados = resultados.filter((o) =>
+        (o.especialidades || []).some((e) => e.toLowerCase().includes(especialidadDetectada.toLowerCase()))
+      );
+    }
+
+    if (seguroDetectado) {
+      resultados = resultados.filter((o) =>
+        (o.segurosAceptados || []).some((s) => s.toLowerCase().includes(seguroDetectado.toLowerCase()))
+      );
+    }
+
+    if (resultados.length === 0) {
+      resultados = opticasRanking.slice(0, 3);
+    } else {
+      resultados = resultados.slice(0, 6);
+    }
+
+    // Paso 6: Resultado final (este sí se queda como success permanente)
+    const resumen = ciudadDetectada
+      ? `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} en ${ciudadDetectada}${especialidadDetectada ? ` especializadas en ${especialidadDetectada}` : ""}!`
+      : `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} que coinciden con tu búsqueda!`;
+
+    // Pequeña pausa dramática antes del resultado final
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    
+    setFranklinMessages((prev) => [...prev, { id: Date.now(), text: resumen, type: "success" }]);
+
+    setFranklinResults(resultados);
+    setFranklinSummary(resumen);
+    setFranklinState("done");
+
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+  };
+
+  ejecutarBusqueda();
+};
 
   const resetFranklin = () => {
     setFranklinState("idle");
@@ -513,42 +522,42 @@ export default function HomePage() {
 
               {/* Conversación */}
               <div className="p-6 space-y-3 min-h-[120px]">
-                {franklinMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex items-start gap-3 animate-[fadeIn_0.3s_ease-in] ${
-                      msg.type === "success" ? "bg-green-50 border border-green-200 rounded-lg p-3" : ""
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        msg.type === "success"
-                          ? "bg-green-500"
-                          : msg.type === "thinking"
-                          ? "bg-navy-100"
-                          : "bg-gray-100"
-                      }`}
-                    >
-                      {msg.type === "thinking" ? (
-                        <Loader2 className="w-4 h-4 text-navy-700 animate-spin" />
-                      ) : msg.type === "success" ? (
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                      ) : (
-                        <Sparkles className="w-4 h-4 text-gray-600" />
-                      )}
-                    </div>
-                    <p
-                      className={`text-sm ${
-                        msg.type === "success"
-                          ? "text-green-900 font-semibold"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {msg.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
+{franklinMessages.map((msg) => (
+  <div
+    key={msg.id}
+    className={`flex items-start gap-3 transition-all duration-500 ${
+      msg.type === "success" 
+        ? "bg-green-50 border border-green-200 rounded-lg p-3" 
+        : "py-1"
+    }`}
+    style={{
+      animation: "fadeIn 0.4s ease-out",
+    }}
+  >
+    <div
+      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
+        msg.type === "success"
+          ? "bg-green-500 scale-100"
+          : "bg-navy-100 scale-95"
+      }`}
+    >
+      {msg.type === "thinking" ? (
+        <Loader2 className="w-4 h-4 text-navy-700 animate-spin" />
+      ) : (
+        <CheckCircle2 className="w-4 h-4 text-white" />
+      )}
+    </div>
+    <p
+      className={`text-sm transition-all duration-300 ${
+        msg.type === "success"
+          ? "text-green-900 font-semibold"
+          : "text-gray-700"
+      }`}
+    >
+      {msg.text}
+    </p>
+  </div>
+))}
 
               {/* Resultados */}
               {franklinState === "done" && franklinResults.length > 0 && (
