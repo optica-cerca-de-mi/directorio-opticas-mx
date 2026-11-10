@@ -434,15 +434,16 @@ export default function HomePage() {
                   </div>
                 </div>
                 
-<div className="flex-1 min-w-0 text-left">
-  <p className="text-base font-bold text-navy-900 font-display">
-    Franklin <span className="text-xs font-normal text-gray-500">AI</span>
-  </p>
-  <p className="text-[10px] text-gray-500 flex items-center gap-1">
-    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-    Tecnología impulsada por Qwen AI
-  </p>
-</div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-base font-bold text-navy-900 font-display">
+                    Franklin <span className="text-xs font-normal text-gray-500">AI</span>
+                  </p>
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    Tecnología impulsada por Qwen AI
+                  </p>
+                </div>
+              </div>
 
               {/* Input y Botón - Stack en móvil, row en desktop */}
               <div className="flex flex-col md:flex-row gap-3">
@@ -520,7 +521,6 @@ export default function HomePage() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
               <div className="bg-gradient-to-r from-navy-900 to-navy-800 text-white px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {/* ✅ ÍCONO DE FRANKLIN VIVO EN EL PANEL */}
                   <div className="relative w-10 h-10 flex items-center justify-center">
                     <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-30"></div>
                     <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
