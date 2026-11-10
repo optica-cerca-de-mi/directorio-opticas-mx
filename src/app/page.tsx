@@ -7,7 +7,8 @@ import {
   TrendingUp, Clock, Search, Eye, MessageCircle,
   Phone, ChevronRight, Award, Heart, Users,
   CheckCircle2, ArrowRight, Zap, Target, Eye as EyeIcon,
-  Building2, Globe, Store
+  Building2, Globe, Store, Glasses, ScanEye, Baby,
+  Contact, Sun, EyeOff
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -104,10 +105,21 @@ function BannerPropio() {
   );
 }
 
+// ✅ NUEVO: Grid de Especialidades para SEO
+const ESPECIALIDADES = [
+  { nombre: "Optometría General", icono: Eye, slug: "optometria" },
+  { nombre: "Lentes de Contacto", icono: Contact, slug: "contactologia" },
+  { nombre: "Baja Visión", icono: EyeOff, slug: "baja-vision" },
+  { nombre: "Oftalmología Pediátrica", icono: Baby, slug: "pediatria" },
+  { nombre: "Lentes Progresivos", icono: Glasses, slug: "progresivos" },
+  { nombre: "Examen de la Vista", icono: ScanEye, slug: "examen-vista" },
+];
+
 export default function HomePage() {
   const [opticas, setOpticas] = useState<OpticaTop[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalOpticas: 0, totalCiudades: 0, totalEspecialidades: 0 });
+  const [franklinQuery, setFranklinQuery] = useState("");
   const { location, consent } = useUserLocation();
 
   useEffect(() => {
@@ -154,6 +166,41 @@ export default function HomePage() {
   });
 
   const top3 = opticasRanking.slice(0, 3);
+
+  // ✅ NUEVO: Procesamiento de consulta de Franklin (Qwen AI)
+  const procesarConsultaFranklin = () => {
+    if (!franklinQuery.trim()) return;
+    
+    // Simulación de extracción de filtros por Qwen AI
+    const query = franklinQuery.toLowerCase();
+    const params = new URLSearchParams();
+    
+    // Detección básica de ciudad (puedes expandir esto)
+    const ciudades = ["cuautitlán", "izcalli", "cdmx", "méxico", "guadalajara", "monterrey"];
+    ciudades.forEach(ciudad => {
+      if (query.includes(ciudad)) params.set("ciudad", ciudad);
+    });
+    
+    // Detección de especialidades
+    ESPECIALIDADES.forEach(esp => {
+      if (query.includes(esp.nombre.toLowerCase()) || query.includes(esp.slug)) {
+        params.set("especialidad", esp.slug);
+      }
+    });
+    
+    // Detección de seguros
+    const seguros = ["gnp", "axa", "metlife", "seguros"];
+    seguros.forEach(seguro => {
+      if (query.includes(seguro)) params.set("seguro", seguro);
+    });
+    
+    // Redirección a /opticas con filtros
+    const queryString = params.toString();
+    const url = queryString ? `/opticas?${queryString}` : "/opticas";
+    
+    // Aquí podrías mostrar un mensaje de "Franklin está buscando..." antes de redirigir
+    window.location.href = url;
+  };
 
   const badgesHumanos = [
     {
@@ -224,59 +271,137 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/* HERO SECTION */}
-      <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden">
+      {/* ✅ HERO SECTION CON FRANKLIN (Qwen AI) */}
+      <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden pt-20 pb-28 md:pt-32 md:pb-36">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-gold-500 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-6 border border-white/20">
-              <Sparkles className="w-4 h-4 text-gold-400" />
-              <span className="text-sm font-medium">El directorio #1 de ópticas en México</span>
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-8 border border-white/20">
+            <Sparkles className="w-4 h-4 text-gold-400" />
+            <span className="text-sm font-medium">El directorio #1 de ópticas en México</span>
+          </div>
+
+          {/* ✅ H1 Optimizado para SEO */}
+          <h1 className="text-4xl md:text-6xl font-bold font-display mb-6 leading-tight">
+            Directorio de Ópticas en México:
+            <span className="block text-gold-400 mt-2">Encuentra tu especialista visual cerca de ti</span>
+          </h1>
+
+          <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+            Reseñas reales, horarios en vivo y contacto directo. Tu próxima visita empieza aquí.
+          </p>
+
+          {/* ✅ Buscador Conversacional "Franklin" impulsado por Qwen AI */}
+          <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-2 md:p-3 border border-gray-200">
+            <div className="flex flex-col md:flex-row gap-2">
+              <div className="flex items-center gap-3 px-4 py-3 md:py-0 md:border-r border-gray-200">
+                <div className="w-10 h-10 bg-gold-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-gold-600" />
+                </div>
+                <div className="text-left hidden md:block">
+                  <p className="text-sm font-bold text-navy-900 font-display">Franklin</p>
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                    Impulsado por Qwen AI
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={franklinQuery}
+                  onChange={(e) => setFranklinQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') procesarConsultaFranklin();
+                  }}
+                  placeholder="Ej: 'Necesito una óptica en Cuautitlán que acepte GNP y tenga lentes de contacto'"
+                  className="w-full h-12 px-4 text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none text-base md:text-lg"
+                />
+              </div>
+
+              <button 
+                onClick={procesarConsultaFranklin}
+                className="h-12 px-8 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+              >
+                <span className="hidden md:inline">Consultar</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
             </div>
-
-            <h1 className="text-4xl md:text-6xl font-bold font-display mb-6 leading-tight">
-              Encuentra la óptica
-              <span className="block text-gold-400">perfecta cerca de ti</span>
-            </h1>
-
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Descubre ópticas verificadas con reseñas reales, horarios en vivo y contacto directo.
-              Tu próxima visita empieza aquí.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/opticas" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg hover:shadow-xl">
-                <Search className="w-5 h-5" /> Explorar directorio
-              </Link>
-              <Link href="/registro" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20">
-                <EyeIcon className="w-5 h-5" /> Registra tu óptica
-              </Link>
+            
+            <div className="flex flex-wrap gap-2 px-4 pt-3 md:px-14">
+              <span className="text-xs text-gray-500 py-1">Prueba decir:</span>
+              <button 
+                onClick={() => setFranklinQuery("Óptica con buen precio en CDMX")}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-1 rounded-full transition-colors"
+              >
+                "Óptica con buen precio en CDMX"
+              </button>
+              <button 
+                onClick={() => setFranklinQuery("Especialista en lentes de contacto")}
+                className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-1 rounded-full transition-colors"
+              >
+                "Especialista en lentes de contacto"
+              </button>
             </div>
+          </div>
 
-            <div className="grid grid-cols-3 gap-4 md:gap-8 mt-16 max-w-2xl mx-auto">
-              <div className="text-center">
-                <AnimatedCounter end={stats.totalOpticas} />
-                <div className="text-sm text-gray-400 mt-1">Ópticas registradas</div>
-              </div>
-              <div className="text-center">
-                <AnimatedCounter end={stats.totalCiudades} />
-                <div className="text-sm text-gray-400 mt-1">Ciudades</div>
-              </div>
-              <div className="text-center">
-                <AnimatedCounter end={stats.totalEspecialidades} />
-                <div className="text-sm text-gray-400 mt-1">Especialidades</div>
-              </div>
+          <div className="grid grid-cols-3 gap-4 md:gap-8 mt-16 max-w-2xl mx-auto border-t border-white/10 pt-8">
+            <div className="text-center">
+              <AnimatedCounter end={stats.totalOpticas} />
+              <div className="text-sm text-gray-400 mt-1">Ópticas registradas</div>
+            </div>
+            <div className="text-center">
+              <AnimatedCounter end={stats.totalCiudades} />
+              <div className="text-sm text-gray-400 mt-1">Ciudades</div>
+            </div>
+            <div className="text-center">
+              <AnimatedCounter end={stats.totalEspecialidades} />
+              <div className="text-sm text-gray-400 mt-1">Especialidades</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* TOP 3 ÓPTICAS RECOMENDADAS */}
+      {/* ✅ NUEVO: Grid de Especialidades (SEO Internal Linking) */}
       <section className="py-16 md:py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
+              Encuentra Especialistas en Salud Visual
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Navega por especialidades y encuentra la óptica perfecta para tus necesidades específicas.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {ESPECIALIDADES.map((esp) => {
+              const Icono = esp.icono;
+              return (
+                <Link
+                  key={esp.slug}
+                  href={`/opticas?especialidad=${esp.slug}`}
+                  className="group bg-white rounded-xl p-6 border border-gray-200 hover:border-navy-900 hover:shadow-lg transition-all text-center"
+                >
+                  <div className="w-12 h-12 bg-navy-100 rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:bg-navy-900 transition-colors">
+                    <Icono className="w-6 h-6 text-navy-700 group-hover:text-white transition-colors" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-navy-900 font-display group-hover:text-navy-700 transition-colors">
+                    {esp.nombre}
+                  </h3>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* TOP 3 ÓPTICAS RECOMENDADAS */}
+      <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-100 text-gold-800 rounded-full mb-4">
@@ -284,7 +409,7 @@ export default function HomePage() {
               <span className="text-sm font-semibold">Top 3 Recomendadas</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
-              Las ópticas que más recomendamos
+              Ópticas Mejor Valoradas por OptiRank
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
               Seleccionadas por nuestro algoritmo OptiRank basado en calificación, ubicación,
@@ -397,6 +522,34 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* OptiAdBoost: Espacio publicitario Home */}
+      <AdSlot slotId="home-between-1" />
+
+      {/* BENEFICIOS */}
+      <section className="py-16 md:py-20 bg-gradient-to-br from-navy-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Todo lo que necesitas en un solo lugar</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la óptica ideal sin complicaciones.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {beneficios.map((beneficio, i) => {
+              const Icono = beneficio.icono;
+              return (
+                <div key={i} className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                  <div className="w-12 h-12 bg-navy-100 rounded-lg flex items-center justify-center mb-4">
+                    <Icono className="w-6 h-6 text-navy-700" />
+                  </div>
+                  <h3 className="text-lg font-bold text-navy-900 mb-2">{beneficio.titulo}</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">{beneficio.descripcion}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* POR QUÉ LA RECOMENDAMOS */}
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -428,35 +581,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ✅ OptiAdBoost: Espacio publicitario Home */}
-      <AdSlot slotId="home-between-1" />
-
-      {/* BENEFICIOS */}
-      <section className="py-16 md:py-20 bg-gradient-to-br from-navy-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Todo lo que necesitas en un solo lugar</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la óptica ideal sin complicaciones.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {beneficios.map((beneficio, i) => {
-              const Icono = beneficio.icono;
-              return (
-                <div key={i} className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                  <div className="w-12 h-12 bg-navy-100 rounded-lg flex items-center justify-center mb-4">
-                    <Icono className="w-6 h-6 text-navy-700" />
-                  </div>
-                  <h3 className="text-lg font-bold text-navy-900 mb-2">{beneficio.titulo}</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{beneficio.descripcion}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* PLANES Y MULTI-SUCURSALES */}
+      {/* PLANES Y MULTI-SUCURSALES (Movido más abajo - B2B) */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-gold-50 via-white to-amber-50 border-y border-gold-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -536,7 +661,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ✅ Footer Público con OptiAdBoost */}
+      {/* Footer Público con OptiAdBoost */}
       <FooterPublico />
     </main>
   );
