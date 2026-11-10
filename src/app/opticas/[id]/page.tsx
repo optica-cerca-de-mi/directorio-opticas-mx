@@ -414,17 +414,30 @@ export default function FichaOptica() {
 
               <h1 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">{nombreMostrar}</h1>
 
-              {optica.calificacionGoogle && (
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-6 h-6 ${i < Math.floor(optica.calificacionGoogle!) ? "text-amber-500 fill-current" : "text-gray-300"}`} />
-                    ))}
-                  </div>
-                  <span className="text-2xl font-bold text-navy-900">{optica.calificacionGoogle}</span>
-                  <span className="text-gray-600">({optica.numResenas} reseñas de Google)</span>
-                </div>
-              )}
+{/* Calificación con link a Google - Sin datos estáticos */}
+<div className="mb-6">
+  {optica.calificacionGoogle ? (
+    <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-1">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`w-6 h-6 ${i < Math.floor(optica.calificacionGoogle!) ? "text-amber-500 fill-current" : "text-gray-300"}`} />
+        ))}
+      </div>
+      <span className="text-2xl font-bold text-navy-900">{optica.calificacionGoogle}</span>
+      <span className="text-gray-600">({optica.numResenas} reseñas)</span>
+    </div>
+  ) : null}
+  
+  {optica.urlGoogleMaps && (
+    <button
+      onClick={() => window.open(optica.urlGoogleMaps, '_blank', 'noopener,noreferrer')}
+      className="text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1"
+    >
+      <ExternalLink className="w-4 h-4" />
+      Ver reseñas actualizadas en Google
+    </button>
+  )}
+</div>
 
               {estadoHorario && (
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg mb-6 ${estadoHorario.abierta ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
