@@ -18,6 +18,7 @@ import { Optica } from "@/types/optica";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { AdSlot } from "@/components/OptiAdBoost";
 import FooterPublico from "@/components/FooterPublico";
+import GoogleLiveBadge from "@/components/GoogleLiveBadge";
 
 interface OpticaTop {
   id: string;
@@ -179,140 +180,137 @@ export default function HomePage() {
 
   const top3 = opticasRanking.slice(0, 3);
 
-  // ✅ Franklin conversacional con transformación spinner → check
-const procesarConsultaFranklin = () => {
-  if (!franklinQuery.trim() || franklinState === "thinking") return;
+  const procesarConsultaFranklin = () => {
+    if (!franklinQuery.trim() || franklinState === "thinking") return;
 
-  const query = franklinQuery.toLowerCase();
-  setFranklinState("thinking");
-  setFranklinMessages([]);
-  setFranklinResults([]);
-  setFranklinSummary("");
+    const query = franklinQuery.toLowerCase();
+    setFranklinState("thinking");
+    setFranklinMessages([]);
+    setFranklinResults([]);
+    setFranklinSummary("");
 
-  // ✅ Scroll inmediato al iniciar la búsqueda
-  setTimeout(() => {
-    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 100);
-
-  const addMessage = (text: string, delay: number, displayDuration: number = 1100) => {
-    return new Promise<void>((resolve) => {
-      const msgId = Date.now() + Math.random();
-      setTimeout(() => {
-        setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
-        
-        setTimeout(() => {
-          setFranklinMessages((prev) => 
-            prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
-          );
-          resolve();
-        }, displayDuration);
-      }, delay);
-    });
-  };
-
-  const ejecutarBusqueda = async () => {
-    await addMessage("Entendido, déjame analizar tu búsqueda...", 300);
-
-    let ciudadDetectada = "";
-    const ciudades = [
-      { nombre: "Cuautitlán Izcalli", keywords: ["cuautitlán", "izcalli", "cuautitlan"] },
-      { nombre: "CDMX", keywords: ["cdmx", "ciudad de méxico", "ciudad de mexico", "méxico", "mexico"] },
-      { nombre: "Estado de México", keywords: ["estado de méxico", "edomex", "estado de mexico"] },
-      { nombre: "Guadalajara", keywords: ["guadalajara", "jalisco"] },
-      { nombre: "Monterrey", keywords: ["monterrey", "nuevo león", "nuevo leon"] },
-    ];
-
-    for (const c of ciudades) {
-      if (c.keywords.some((k) => query.includes(k))) {
-        ciudadDetectada = c.nombre;
-        break;
-      }
-    }
-
-    await addMessage(
-      ciudadDetectada
-        ? `Buscando ópticas en ${ciudadDetectada}...`
-        : "Buscando ópticas cerca de ti...",
-      400
-    );
-
-    let especialidadDetectada = "";
-    for (const esp of ESPECIALIDADES) {
-      if (query.includes(esp.nombre.toLowerCase()) || query.includes(esp.slug)) {
-        especialidadDetectada = esp.nombre;
-        break;
-      }
-    }
-
-    if (especialidadDetectada) {
-      await addMessage(`Filtrando por especialidad: ${especialidadDetectada}...`, 500);
-    } else {
-      await addMessage("Analizando especialidades disponibles...", 500);
-    }
-
-    let seguroDetectado = "";
-    const seguros = ["gnp", "axa", "metlife", "seguro", "seguros"];
-    for (const s of seguros) {
-      if (query.includes(s)) {
-        seguroDetectado = s.toUpperCase();
-        break;
-      }
-    }
-
-    if (seguroDetectado) {
-      await addMessage(`Verificando ópticas que acepten ${seguroDetectado}...`, 500);
-    }
-
-    await addMessage("Comparando calificaciones y horarios...", 600);
-
-    let resultados = [...opticas];
-
-    if (ciudadDetectada) {
-      resultados = resultados.filter(
-        (o) =>
-          (o.ciudad || "").toLowerCase().includes(ciudadDetectada.toLowerCase()) ||
-          (o.estado || "").toLowerCase().includes(ciudadDetectada.toLowerCase())
-      );
-    }
-
-    if (especialidadDetectada) {
-      resultados = resultados.filter((o) =>
-        (o.especialidades || []).some((e) => e.toLowerCase().includes(especialidadDetectada.toLowerCase()))
-      );
-    }
-
-    if (seguroDetectado) {
-      resultados = resultados.filter((o) =>
-        (o.segurosAceptados || []).some((s) => s.toLowerCase().includes(seguroDetectado.toLowerCase()))
-      );
-    }
-
-    if (resultados.length === 0) {
-      resultados = opticasRanking.slice(0, 3);
-    } else {
-      resultados = resultados.slice(0, 6);
-    }
-
-    const resumen = ciudadDetectada
-      ? `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} en ${ciudadDetectada}${especialidadDetectada ? ` especializadas en ${especialidadDetectada}` : ""}!`
-      : `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} que coinciden con tu búsqueda!`;
-
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    
-    setFranklinMessages((prev) => [...prev, { id: Date.now(), text: resumen, type: "success" }]);
-
-    setFranklinResults(resultados);
-    setFranklinSummary(resumen);
-    setFranklinState("done");
-
-    // ✅ Scroll final cuando aparecen los resultados
     setTimeout(() => {
       resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 500);
-  };
+    }, 100);
 
-  ejecutarBusqueda();
-};
+    const addMessage = (text: string, delay: number, displayDuration: number = 1100) => {
+      return new Promise<void>((resolve) => {
+        const msgId = Date.now() + Math.random();
+        setTimeout(() => {
+          setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
+          
+          setTimeout(() => {
+            setFranklinMessages((prev) => 
+              prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
+            );
+            resolve();
+          }, displayDuration);
+        }, delay);
+      });
+    };
+
+    const ejecutarBusqueda = async () => {
+      await addMessage("Entendido, déjame analizar tu búsqueda...", 300);
+
+      let ciudadDetectada = "";
+      const ciudades = [
+        { nombre: "Cuautitlán Izcalli", keywords: ["cuautitlán", "izcalli", "cuautitlan"] },
+        { nombre: "CDMX", keywords: ["cdmx", "ciudad de méxico", "ciudad de mexico", "méxico", "mexico"] },
+        { nombre: "Estado de México", keywords: ["estado de méxico", "edomex", "estado de mexico"] },
+        { nombre: "Guadalajara", keywords: ["guadalajara", "jalisco"] },
+        { nombre: "Monterrey", keywords: ["monterrey", "nuevo león", "nuevo leon"] },
+      ];
+
+      for (const c of ciudades) {
+        if (c.keywords.some((k) => query.includes(k))) {
+          ciudadDetectada = c.nombre;
+          break;
+        }
+      }
+
+      await addMessage(
+        ciudadDetectada
+          ? `Buscando ópticas en ${ciudadDetectada}...`
+          : "Buscando ópticas cerca de ti...",
+        400
+      );
+
+      let especialidadDetectada = "";
+      for (const esp of ESPECIALIDADES) {
+        if (query.includes(esp.nombre.toLowerCase()) || query.includes(esp.slug)) {
+          especialidadDetectada = esp.nombre;
+          break;
+        }
+      }
+
+      if (especialidadDetectada) {
+        await addMessage(`Filtrando por especialidad: ${especialidadDetectada}...`, 500);
+      } else {
+        await addMessage("Analizando especialidades disponibles...", 500);
+      }
+
+      let seguroDetectado = "";
+      const seguros = ["gnp", "axa", "metlife", "seguro", "seguros"];
+      for (const s of seguros) {
+        if (query.includes(s)) {
+          seguroDetectado = s.toUpperCase();
+          break;
+        }
+      }
+
+      if (seguroDetectado) {
+        await addMessage(`Verificando ópticas que acepten ${seguroDetectado}...`, 500);
+      }
+
+      await addMessage("Comparando calificaciones y horarios...", 600);
+
+      let resultados = [...opticas];
+
+      if (ciudadDetectada) {
+        resultados = resultados.filter(
+          (o) =>
+            (o.ciudad || "").toLowerCase().includes(ciudadDetectada.toLowerCase()) ||
+            (o.estado || "").toLowerCase().includes(ciudadDetectada.toLowerCase())
+        );
+      }
+
+      if (especialidadDetectada) {
+        resultados = resultados.filter((o) =>
+          (o.especialidades || []).some((e) => e.toLowerCase().includes(especialidadDetectada.toLowerCase()))
+        );
+      }
+
+      if (seguroDetectado) {
+        resultados = resultados.filter((o) =>
+          (o.segurosAceptados || []).some((s) => s.toLowerCase().includes(seguroDetectado.toLowerCase()))
+        );
+      }
+
+      if (resultados.length === 0) {
+        resultados = opticasRanking.slice(0, 3);
+      } else {
+        resultados = resultados.slice(0, 6);
+      }
+
+      const resumen = ciudadDetectada
+        ? `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} en ${ciudadDetectada}${especialidadDetectada ? ` especializadas en ${especialidadDetectada}` : ""}!`
+        : `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} que coinciden con tu búsqueda!`;
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      
+      setFranklinMessages((prev) => [...prev, { id: Date.now(), text: resumen, type: "success" }]);
+
+      setFranklinResults(resultados);
+      setFranklinSummary(resumen);
+      setFranklinState("done");
+
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 500);
+    };
+
+    ejecutarBusqueda();
+  };
 
   const resetFranklin = () => {
     setFranklinState("idle");
@@ -743,17 +741,15 @@ const procesarConsultaFranklin = () => {
                       <MapPin className="w-3 h-3 flex-shrink-0" /> {optica.ciudad}{optica.estado ? `, ${optica.estado}` : ""}
                     </p>
 
-                    {optica.calificacionGoogle && (
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < Math.floor(optica.calificacionGoogle!) ? "text-amber-500 fill-current" : "text-gray-300"}`} />
-                          ))}
-                        </div>
-                        <span className="font-bold text-navy-900">{optica.calificacionGoogle}</span>
-                        <span className="text-sm text-gray-600">({optica.numResenas})</span>
-                      </div>
-                    )}
+                    {/* ✅ GoogleLiveBadge integrado */}
+                    <div className="mb-3">
+                      <GoogleLiveBadge 
+                        nombre={optica.nombre}
+                        calificacion={optica.calificacionGoogle}
+                        numResenas={optica.numResenas}
+                        urlGoogleMaps={optica.urlGoogleMaps}
+                      />
+                    </div>
 
                     {optica.especialidades && optica.especialidades.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-3">
