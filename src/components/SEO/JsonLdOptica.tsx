@@ -1,5 +1,3 @@
-"use client";
-
 interface JsonLdOpticaProps {
   nombre: string;
   descripcion?: string;
