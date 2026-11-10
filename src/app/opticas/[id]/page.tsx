@@ -647,56 +647,59 @@ export default function FichaOptica() {
               </div>
             )}
 
-            {/* Reseñas de Google */}
-            {planConfig?.limites.muestraResenasGoogle && optica.resenasGoogle?.ultimasResenas && optica.resenasGoogle.ultimasResenas.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-navy-900 font-display mb-1">Reseñas de Google</h2>
-                    <p className="text-gray-600">Opiniones reales de pacientes verificados</p>
-                  </div>
-                  {optica.resenasGoogle.urlPerfil && (
-                    <a href={optica.resenasGoogle.urlPerfil} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg text-sm font-semibold transition-colors">
-                      Ver todas en Google <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-                </div>
-                <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-navy-900">{optica.resenasGoogle.calificacion}</div>
-                    <div className="flex items-center justify-center gap-1 mt-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(optica.resenasGoogle!.calificacion) ? "text-amber-500 fill-current" : "text-gray-300"}`} />
-                      ))}
-                    </div>
-                    <div className="text-sm text-gray-600 mt-1">{optica.resenasGoogle.totalResenas} reseñas</div>
-                  </div>
-                </div>
-                <div className="space-y-6">
-                  {optica.resenasGoogle.ultimasResenas.slice(0, planConfig.limites.maxResenasMostradas).map((resena, index) => (
-                    <div key={index} className="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-navy-100 rounded-full flex items-center justify-center">
-                            <span className="text-navy-700 font-bold text-sm">{resena.autor.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-navy-900">{resena.autor}</p>
-                            <p className="text-xs text-gray-500">{resena.fecha}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < resena.calificacion ? "text-amber-500 fill-current" : "text-gray-300"}`} />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-gray-700 leading-relaxed">{resena.texto}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+// Reemplaza las líneas 650-701 (toda la sección de "Reseñas de Google")
+// POR ESTO:
+
+{/* ✅ Reseñas Verificadas en Google - Sin datos manuales */}
+{optica.urlGoogleMaps && (
+  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <div className="text-center mb-6">
+      <h2 className="text-2xl font-bold text-navy-900 font-display mb-2">
+        Reseñas Verificadas en Google
+      </h2>
+      <p className="text-gray-600">
+        Opiniones reales de pacientes, actualizadas en tiempo real
+      </p>
+    </div>
+
+    {optica.calificacionGoogle && (
+      <div className="bg-gray-50 rounded-xl p-6 mb-6">
+        <div className="text-center">
+          <div className="text-5xl font-bold text-navy-900 mb-2">{optica.calificacionGoogle}</div>
+          <div className="flex items-center justify-center gap-1 mb-2">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className={`w-5 h-5 ${i < Math.floor(optica.calificacionGoogle!) ? "text-amber-500 fill-current" : "text-gray-300"}`}
+              />
+            ))}
+          </div>
+          {optica.numResenas && (
+            <div className="text-sm text-gray-600">{optica.numResenas} reseñas en Google</div>
+          )}
+        </div>
+      </div>
+    )}
+
+    <button
+      onClick={() => window.open(optica.urlGoogleMaps, '_blank', 'noopener,noreferrer')}
+      className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+    >
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Ver todas las reseñas en Google
+    </button>
+
+    <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-500">
+      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+      <span>Reseñas 100% reales y verificadas por Google</span>
+    </div>
+  </div>
+)}
 
             {/* Especialidades */}
             {planConfig && planConfig.limites.maxEspecialidades > 0 && optica.especialidades && optica.especialidades.length > 0 && (
