@@ -425,15 +425,14 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-2 md:p-3 border border-gray-200">
             <div className="flex flex-col md:flex-row gap-2">
               <div className="flex items-center gap-3 px-4 py-3 md:py-0 md:border-r border-gray-200">
-<div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
-  {/* Resplandor animado */}
-  <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
-  {/* Círculo principal con gradiente */}
-  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
-    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
-  </div>
-</div>
+                {/* ✅ ÍCONO DE FRANKLIN VIVO (Latido + Resplandor) */}
+                <div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+                  <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
+                  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
+                    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
+                  </div>
                 </div>
+                
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-bold text-navy-900 font-display">Franklin</p>
                   <p className="text-[10px] text-gray-500 flex items-center gap-1">
@@ -513,12 +512,13 @@ export default function HomePage() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
               <div className="bg-gradient-to-r from-navy-900 to-navy-800 text-white px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-<div className="relative w-10 h-10 flex items-center justify-center">
-  <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-30"></div>
-  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
-    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
-  </div>
-</div>
+                  {/* ✅ ÍCONO DE FRANKLIN VIVO EN EL PANEL */}
+                  <div className="relative w-10 h-10 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-30"></div>
+                    <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
+                      <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
+                    </div>
+                  </div>
                   <div>
                     <p className="font-bold font-display">Franklin</p>
                     <p className="text-xs text-gray-300">Impulsado por Qwen AI</p>
@@ -718,7 +718,6 @@ export default function HomePage() {
 
               return (
                 <div key={optica.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-200 flex flex-col">
-                  {/* Imagen - Link a ficha */}
                   <Link href={`/opticas/${optica.slug || optica.id}`} className="block relative aspect-[4/3] bg-gray-200 overflow-hidden">
                     {imagenPrincipal ? (
                       <img src={imagenPrincipal} alt={optica.nombre} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -750,7 +749,6 @@ export default function HomePage() {
                     )}
                   </Link>
 
-                  {/* Contenido - Fuera del Link */}
                   <div className="p-6 flex-1 flex flex-col">
                     <Link href={`/opticas/${optica.slug || optica.id}`}>
                       <h3 className="font-bold text-navy-900 text-xl mb-2 font-display group-hover:text-navy-700 transition-colors">{optica.nombre}</h3>
@@ -759,7 +757,6 @@ export default function HomePage() {
                       <MapPin className="w-3 h-3 flex-shrink-0" /> {optica.ciudad}{optica.estado ? `, ${optica.estado}` : ""}
                     </p>
 
-                    {/* ✅ GoogleLiveBadge con modal */}
                     <div className="mb-3">
                       <GoogleLiveBadge
                         nombre={optica.nombre}
