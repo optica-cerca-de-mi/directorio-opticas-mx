@@ -421,70 +421,77 @@ export default function HomePage() {
             Reseñas reales, horarios en vivo y contacto directo. Tu próxima visita empieza aquí.
           </p>
 
-          {/* Buscador Conversacional Franklin */}
-          <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-2 md:p-3 border border-gray-200">
-            <div className="flex flex-col md:flex-row gap-2">
-              <div className="flex items-center gap-3 px-4 py-3 md:py-0 md:border-r border-gray-200">
-                {/* ✅ ÍCONO DE FRANKLIN VIVO (Latido + Resplandor) */}
-                <div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+          {/* ✅ Buscador Conversacional Franklin - OPTIMIZADO MÓVIL */}
+          <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-4 md:p-3 border border-gray-200">
+            <div className="flex flex-col gap-3">
+              {/* Header con Franklin - Visible en móvil y desktop */}
+              <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                {/* Ícono animado - Más grande en móvil */}
+                <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
-                  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
-                    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
+                  <div className="relative w-12 h-12 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
+                    <Sparkles className="w-6 h-6 text-white drop-shadow-md" />
                   </div>
                 </div>
                 
-                <div className="text-left hidden md:block">
-                  <p className="text-sm font-bold text-navy-900 font-display">Franklin</p>
-                  <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-base font-bold text-navy-900 font-display">Franklin</p>
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                    Impulsado por Qwen AI
+                    Búsqueda Inteligente
                   </p>
                 </div>
               </div>
 
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={franklinQuery}
-                  onChange={(e) => setFranklinQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") procesarConsultaFranklin();
-                  }}
-                  placeholder="Ej: 'Necesito una óptica en Cuautitlán que acepte GNP y tenga lentes de contacto'"
-                  className="w-full h-12 px-4 text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none text-base md:text-lg"
-                />
+              {/* Input y Botón - Stack en móvil, row en desktop */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={franklinQuery}
+                    onChange={(e) => setFranklinQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") procesarConsultaFranklin();
+                    }}
+                    placeholder="Ej: 'Necesito una óptica en Cuautitlán que acepte GNP...'"
+                    className="w-full h-14 md:h-12 px-4 text-gray-800 placeholder-gray-400 bg-gray-50 md:bg-transparent border border-gray-200 md:border-0 rounded-xl md:rounded-none focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent text-base"
+                  />
+                </div>
+
+                <button
+                  onClick={procesarConsultaFranklin}
+                  disabled={franklinState === "thinking" || !franklinQuery.trim()}
+                  className="w-full md:w-auto h-14 md:h-12 px-6 bg-navy-900 hover:bg-navy-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95"
+                >
+                  {franklinState === "thinking" ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5" />
+                      <span>Búsqueda Inteligente</span>
+                    </>
+                  )}
+                </button>
               </div>
 
-              <button
-                onClick={procesarConsultaFranklin}
-                disabled={franklinState === "thinking" || !franklinQuery.trim()}
-                className="h-12 px-8 bg-navy-900 hover:bg-navy-800 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-              >
-                {franklinState === "thinking" ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <span className="hidden md:inline">Consultar</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2 px-4 pt-3 md:px-14">
-              <span className="text-xs text-gray-500 py-1">Prueba decir:</span>
-              <button
-                onClick={() => setFranklinQuery("Óptica con buen precio en CDMX")}
-                className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-1 rounded-full transition-colors"
-              >
-                "Óptica con buen precio en CDMX"
-              </button>
-              <button
-                onClick={() => setFranklinQuery("Especialista en lentes de contacto")}
-                className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-1 rounded-full transition-colors"
-              >
-                "Especialista en lentes de contacto"
-              </button>
+              {/* Sugerencias - Mejor espaciado en móvil */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-2">Prueba decir:</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setFranklinQuery("Óptica con buen precio en CDMX")}
+                    className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-2 rounded-full transition-colors whitespace-nowrap"
+                  >
+                    "Óptica con buen precio en CDMX"
+                  </button>
+                  <button
+                    onClick={() => setFranklinQuery("Especialista en lentes de contacto")}
+                    className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-2 rounded-full transition-colors whitespace-nowrap"
+                  >
+                    "Especialista en lentes de contacto"
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
