@@ -19,6 +19,7 @@ import { useUserLocation } from "@/hooks/useUserLocation";
 import { AdSlot } from "@/components/OptiAdBoost";
 import FooterPublico from "@/components/FooterPublico";
 import GoogleLiveBadge from "@/components/GoogleLiveBadge";
+import GoogleMapsModal from "@/components/GoogleMapsModal";
 
 interface OpticaTop {
   id: string;
@@ -131,6 +132,7 @@ export default function HomePage() {
   const [franklinMessages, setFranklinMessages] = useState<FranklinMessage[]>([]);
   const [franklinResults, setFranklinResults] = useState<OpticaTop[]>([]);
   const [franklinSummary, setFranklinSummary] = useState("");
+  const [mapsModal, setMapsModal] = useState<{ isOpen: boolean; optica: OpticaTop | null }>({ isOpen: false, optica: null });
   const resultsRef = useRef<HTMLDivElement>(null);
   const { location, consent } = useUserLocation();
 
@@ -389,6 +391,14 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-white">
+      {/* Modal de Google Maps */}
+      <GoogleMapsModal
+        isOpen={mapsModal.isOpen}
+        onClose={() => setMapsModal({ isOpen: false, optica: null })}
+        nombre={mapsModal.optica?.nombre || ""}
+        urlGoogleMaps={mapsModal.optica?.urlGoogleMaps || ""}
+      />
+
       {/* HERO SECTION CON FRANKLIN */}
       <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden pt-20 pb-28 md:pt-32 md:pb-36">
         <div className="absolute inset-0 opacity-10">
@@ -495,7 +505,6 @@ export default function HomePage() {
         <section ref={resultsRef} className="py-16 bg-gradient-to-br from-gold-50 to-white border-b border-gold-200">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-              {/* Header del panel */}
               <div className="bg-gradient-to-r from-navy-900 to-navy-800 text-white px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gold-500 rounded-full flex items-center justify-center">
@@ -517,7 +526,6 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Conversación con transformación spinner → check */}
               <div className="p-6 space-y-3 min-h-[120px]">
                 {franklinMessages.map((msg) => (
                   <div
@@ -527,9 +535,7 @@ export default function HomePage() {
                         ? "bg-green-50 border border-green-200 rounded-lg p-3" 
                         : "py-1"
                     }`}
-                    style={{
-                      animation: "fadeIn 0.4s ease-out",
-                    }}
+                    style={{ animation: "fadeIn 0.4s ease-out" }}
                   >
                     <div
                       className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
@@ -557,7 +563,6 @@ export default function HomePage() {
                 ))}
               </div>
 
-              {/* Resultados */}
               {franklinState === "done" && franklinResults.length > 0 && (
                 <div className="border-t border-gray-200 p-6 bg-gray-50">
                   <div className="flex items-center justify-between mb-4">
@@ -703,8 +708,9 @@ export default function HomePage() {
               const razonTexto = badge.razon(optica);
 
               return (
-                <Link key={optica.id} href={`/opticas/${optica.slug || optica.id}`} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-200">
-                  <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
+                <div key={optica.id} className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-200 flex flex-col">
+                  {/* Imagen - Link a ficha */}
+                  <Link href={`/opticas/${optica.slug || optica.id}`} className="block relative aspect-[4/3] bg-gray-200 overflow-hidden">
                     {imagenPrincipal ? (
                       <img src={imagenPrincipal} alt={optica.nombre} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
@@ -733,21 +739,25 @@ export default function HomePage() {
                         </span>
                       </div>
                     )}
-                  </div>
+                  </Link>
 
-                  <div className="p-6">
-                    <h3 className="font-bold text-navy-900 text-xl mb-2 font-display group-hover:text-navy-700 transition-colors">{optica.nombre}</h3>
+                  {/* Contenido - Fuera del Link */}
+                  <div className="p-6 flex-1 flex flex-col">
+                    <Link href={`/opticas/${optica.slug || optica.id}`}>
+                      <h3 className="font-bold text-navy-900 text-xl mb-2 font-display group-hover:text-navy-700 transition-colors">{optica.nombre}</h3>
+                    </Link>
                     <p className="text-sm text-gray-600 mb-3 flex items-center gap-1">
                       <MapPin className="w-3 h-3 flex-shrink-0" /> {optica.ciudad}{optica.estado ? `, ${optica.estado}` : ""}
                     </p>
 
-                    {/* ✅ GoogleLiveBadge integrado */}
+                    {/* ✅ GoogleLiveBadge con modal */}
                     <div className="mb-3">
-                      <GoogleLiveBadge 
+                      <GoogleLiveBadge
                         nombre={optica.nombre}
                         calificacion={optica.calificacionGoogle}
                         numResenas={optica.numResenas}
                         urlGoogleMaps={optica.urlGoogleMaps}
+                        onOpenMaps={() => setMapsModal({ isOpen: true, optica })}
                       />
                     </div>
 
@@ -761,16 +771,16 @@ export default function HomePage() {
 
                     {optica.descripcion && <p className="text-sm text-gray-600 line-clamp-2 mb-4">{optica.descripcion}</p>}
 
-                    <div className={`mb-4 p-3 ${badge.bgColor} border ${badge.borderColor} rounded-lg`}>
+                    <div className={`mb-4 p-3 ${badge.bgColor} border ${badge.borderColor} rounded-lg mt-auto`}>
                       <p className="text-[11px] text-gray-700 italic flex items-start gap-1.5">
                         <Sparkles className="w-3 h-3 flex-shrink-0 mt-0.5 text-amber-600" /> {razonTexto}
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <span className="text-sm font-semibold text-navy-700 flex items-center gap-1 group-hover:gap-2 transition-all">
+                      <Link href={`/opticas/${optica.slug || optica.id}`} className="text-sm font-semibold text-navy-700 flex items-center gap-1 group-hover:gap-2 transition-all">
                         Ver ficha completa <ChevronRight className="w-4 h-4" />
-                      </span>
+                      </Link>
                       <div className="flex items-center gap-1">
                         {abierta ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
@@ -784,7 +794,7 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

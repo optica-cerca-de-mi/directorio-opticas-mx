@@ -1,15 +1,16 @@
 "use client";
 
-import { Star, ExternalLink, MapPin } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 
 interface GoogleLiveBadgeProps {
   nombre: string;
   calificacion?: number;
   numResenas?: number;
   urlGoogleMaps?: string;
+  onOpenMaps?: () => void;
 }
 
-export default function GoogleLiveBadge({ nombre, calificacion, numResenas, urlGoogleMaps }: GoogleLiveBadgeProps) {
+export default function GoogleLiveBadge({ nombre, calificacion, numResenas, urlGoogleMaps, onOpenMaps }: GoogleLiveBadgeProps) {
   // Si no hay URL de Google Maps, mostramos los datos estáticos de Firebase (fallback)
   if (!urlGoogleMaps) {
     return (
@@ -25,13 +26,15 @@ export default function GoogleLiveBadge({ nombre, calificacion, numResenas, urlG
     );
   }
 
-  // ✅ ESTRATEGIA GRATUITA: Enlace directo a la ficha real de Google
+  // ✅ Ahora abre el modal en lugar de redirigir
   return (
-    <a 
-      href={urlGoogleMaps} 
-      target="_blank" 
-      rel="noopener noreferrer"
-      className="group flex items-center gap-3 p-2 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation(); // ✅ Evita que el Link padre intercepte el clic
+        onOpenMaps?.();
+      }}
+      className="group flex items-center gap-3 p-2 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer w-full text-left"
     >
       <div className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
         <MapPin className="w-4 h-4 text-blue-600" />
@@ -43,7 +46,6 @@ export default function GoogleLiveBadge({ nombre, calificacion, numResenas, urlG
           Calificación y reseñas en vivo
         </p>
       </div>
-      <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-    </a>
+    </button>
   );
 }
