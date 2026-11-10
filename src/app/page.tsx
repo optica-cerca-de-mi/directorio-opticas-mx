@@ -425,8 +425,14 @@ export default function HomePage() {
           <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-2 md:p-3 border border-gray-200">
             <div className="flex flex-col md:flex-row gap-2">
               <div className="flex items-center gap-3 px-4 py-3 md:py-0 md:border-r border-gray-200">
-                <div className="w-10 h-10 bg-gold-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-gold-600" />
+<div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
+  {/* Resplandor animado */}
+  <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
+  {/* Círculo principal con gradiente */}
+  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
+    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
+  </div>
+</div>
                 </div>
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-bold text-navy-900 font-display">Franklin</p>
@@ -507,9 +513,12 @@ export default function HomePage() {
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
               <div className="bg-gradient-to-r from-navy-900 to-navy-800 text-white px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gold-500 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-navy-900" />
-                  </div>
+<div className="relative w-10 h-10 flex items-center justify-center">
+  <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-30"></div>
+  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
+    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
+  </div>
+</div>
                   <div>
                     <p className="font-bold font-display">Franklin</p>
                     <p className="text-xs text-gray-300">Impulsado por Qwen AI</p>
