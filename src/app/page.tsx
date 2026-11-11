@@ -219,68 +219,114 @@ export default function HomePage() {
       }
 
       const aiData = result.data;
+      const { ciudad, especialidad, seguro } = aiData.filtros;
 
       for (const paso of aiData.pasos_pensamiento) {
         await addStreamingMessage(paso);
       }
 
       let resultadosFiltrados = [...opticas];
+      let hayCoincidenciasExactas = true;
 
-      // 1. FILTRADO: Coincidencia en genéricas O personalizadas
-      if (aiData.filtros.ciudad) {
-        const ciudadLower = aiData.filtros.ciudad.toLowerCase();
+      // 1. FILTRADO ESTRICTO POR CIUDAD (si se especificó)
+      if (ciudad) {
+        const ciudadLower = ciudad.toLowerCase();
+        const antes = resultadosFiltrados.length;
         resultadosFiltrados = resultadosFiltrados.filter((o) =>
           (o.ciudad || "").toLowerCase().includes(ciudadLower) ||
           (o.estado || "").toLowerCase().includes(ciudadLower)
         );
+        
+        if (resultadosFiltrados.length === 0 && antes > 0) {
+          hayCoincidenciasExactas = false;
+          await addStreamingMessage(`⚠️ No encontramos ópticas en ${ciudad}, mostrando opciones cercanas...`);
+          resultadosFiltrados = [...opticas]; // Resetear para mostrar todas
+        }
       }
 
-      if (aiData.filtros.especialidad) {
-        const espLower = aiData.filtros.especialidad.toLowerCase();
-        resultadosFiltrados = resultadosFiltrados.filter((o) =>
-          (o.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower)) ||
-          (o.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower))
-        );
+      // 2. FILTRADO ESTRICTO POR ESPECIALIDAD (si se especificó)
+      if (especialidad) {
+        const espLower = especialidad.toLowerCase().trim();
+        const antes = resultadosFiltrados.length;
+        
+        resultadosFiltrados = resultadosFiltrados.filter((o) => {
+          // Buscar en especialidades genéricas
+          const coincideGenerica = (o.especialidades || []).some((e: string) => 
+            e.toLowerCase().includes(espLower) || espLower.includes(e.toLowerCase())
+          );
+          
+          // Buscar en especialidades personalizadas
+          const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) => 
+            e.toLowerCase().includes(espLower) || espLower.includes(e.toLowerCase())
+          );
+          
+          return coincideGenerica || coincidePersonalizada;
+        });
+
+        if (resultadosFiltrados.length === 0 && antes > 0) {
+          hayCoincidenciasExactas = false;
+          await addStreamingMessage(`⚠️ No encontramos ópticas con "${especialidad}", mostrando opciones disponibles...`);
+          resultadosFiltrados = [...opticas]; // Resetear
+        }
       }
 
-      if (aiData.filtros.seguro) {
-        const seguroLower = aiData.filtros.seguro.toLowerCase();
+      // 3. FILTRADO POR SEGURO (si se especificó)
+      if (seguro) {
+        const seguroLower = seguro.toLowerCase();
         resultadosFiltrados = resultadosFiltrados.filter((o) =>
           (o.segurosAceptados || []).some((s: string) => s.toLowerCase().includes(seguroLower))
         );
       }
 
-      // 2. ORDENAMIENTO INTELIGENTE (SCORING): Da ventaja a Premium y especialidades personalizadas
-      if (aiData.filtros.especialidad) {
-        const espLower = aiData.filtros.especialidad.toLowerCase();
+      // 4. ORDENAMIENTO INTELIGENTE CON SCORING
+      if (especialidad || ciudad) {
         resultadosFiltrados.sort((a, b) => {
           let scoreA = 0;
           let scoreB = 0;
 
-          // Ventaja por Plan
+          // Ventaja por Plan (peso alto)
           if (a.plan === 'premium_plus') scoreA += 30;
           else if (a.plan === 'premium') scoreA += 20;
           
           if (b.plan === 'premium_plus') scoreB += 30;
           else if (b.plan === 'premium') scoreB += 20;
 
-          // Ventaja por coincidencia en especialidad personalizada (más relevante)
-          const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
-          const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
-          
-          if (aTienePersonalizada) scoreA += 15;
-          if (bTienePersonalizada) scoreB += 15;
+          // Ventaja por coincidencia EXACTA en especialidad personalizada (peso muy alto)
+          if (especialidad) {
+            const espLower = especialidad.toLowerCase();
+            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => 
+              e.toLowerCase() === espLower || e.toLowerCase().includes(espLower)
+            );
+            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => 
+              e.toLowerCase() === espLower || e.toLowerCase().includes(espLower)
+            );
+            
+            if (aTienePersonalizada) scoreA += 25; // Peso muy alto
+            if (bTienePersonalizada) scoreB += 25;
+
+            // Coincidencia en genéricas (peso medio)
+            const aTieneGenerica = (a.especialidades || []).some((e: string) => 
+              e.toLowerCase().includes(espLower)
+            );
+            const bTieneGenerica = (b.especialidades || []).some((e: string) => 
+              e.toLowerCase().includes(espLower)
+            );
+
+            if (aTieneGenerica && !aTienePersonalizada) scoreA += 10;
+            if (bTieneGenerica && !bTienePersonalizada) scoreB += 10;
+          }
 
           // Desempate por calificación de Google
           scoreA += (a.calificacionGoogle || 0) * 2;
           scoreB += (b.calificacionGoogle || 0) * 2;
 
-          return scoreB - scoreA; // Orden descendente (mayor score primero)
+          return scoreB - scoreA;
         });
       }
 
-      // Si no hay coincidencias, mostramos el Top 3 por defecto
+      // 5. LIMITAR RESULTADOS
       if (resultadosFiltrados.length === 0) {
+        await addStreamingMessage("No encontramos ópticas que coincidan exactamente con tu búsqueda. Te mostramos las mejores opciones disponibles.");
         resultadosFiltrados = opticasRanking.slice(0, 3);
       } else {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
@@ -289,7 +335,7 @@ export default function HomePage() {
       await addStreamingMessage(aiData.mensaje_final);
 
       setFranklinResults(resultadosFiltrados);
-      setFranklinSummary(aiData.mensaje_final);
+      setFranklinSummary(hayCoincidenciasExactas ? aiData.mensaje_final : "Mostrando opciones disponibles (no hay coincidencias exactas)");
       setFranklinState("done");
 
       setTimeout(() => {
@@ -298,7 +344,7 @@ export default function HomePage() {
 
     } catch (error) {
       console.error("Error en Franklin:", error);
-      await addStreamingMessage("😔 Hubo un problema procesando tu búsqueda. Por favor, intenta de nuevo con otros términos.");
+      await addStreamingMessage("Hubo un problema procesando tu búsqueda. Por favor, intenta de nuevo.");
       setFranklinState("done");
     }
   };
