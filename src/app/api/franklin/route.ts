@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-           model: 'llama3-8b-8192', // El modelo más estable y siempre disponible en Groq Free Tier
+           model: 'qwen/qwen3.8-27b', // Modelo Qwen en Groq: rápido, entiende español perfecto y es 100% gratuito
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: query }
