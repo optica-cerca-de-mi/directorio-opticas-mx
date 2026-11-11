@@ -182,10 +182,9 @@ export default function HomePage() {
 
   const top3 = opticasRanking.slice(0, 3);
 
-  const procesarConsultaFranklin = () => {
+  const procesarConsultaFranklin = async () => {
     if (!franklinQuery.trim() || franklinState === "thinking") return;
 
-    const query = franklinQuery.toLowerCase();
     setFranklinState("thinking");
     setFranklinMessages([]);
     setFranklinResults([]);
@@ -195,121 +194,90 @@ export default function HomePage() {
       resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
 
-    const addMessage = (text: string, delay: number, displayDuration: number = 1100) => {
-      return new Promise<void>((resolve) => {
-        const msgId = Date.now() + Math.random();
-        setTimeout(() => {
-          setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
-          
-          setTimeout(() => {
-            setFranklinMessages((prev) => 
-              prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
-            );
-            resolve();
-          }, displayDuration);
-        }, delay);
-      });
+    // Función auxiliar para mostrar mensajes paso a paso (UX de streaming)
+    const addStreamingMessage = async (text: string) => {
+      const msgId = Date.now() + Math.random();
+      setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
+      
+      // Pequeña pausa natural para que se sienta como si estuviera "pensando"
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      
+      setFranklinMessages((prev) => 
+        prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
     };
 
-    const ejecutarBusqueda = async () => {
-      await addMessage("Entendido, déjame analizar tu búsqueda...", 300);
+    try {
+      // 1. Llamar a nuestra API real de Franklin
+      const response = await fetch('/api/franklin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: franklinQuery }),
+      });
 
-      let ciudadDetectada = "";
-      const ciudades = [
-        { nombre: "Cuautitlán Izcalli", keywords: ["cuautitlán", "izcalli", "cuautitlan"] },
-        { nombre: "CDMX", keywords: ["cdmx", "ciudad de méxico", "ciudad de mexico", "méxico", "mexico"] },
-        { nombre: "Estado de México", keywords: ["estado de méxico", "edomex", "estado de mexico"] },
-        { nombre: "Guadalajara", keywords: ["guadalajara", "jalisco"] },
-        { nombre: "Monterrey", keywords: ["monterrey", "nuevo león", "nuevo leon"] },
-      ];
+      const result = await response.json();
 
-      for (const c of ciudades) {
-        if (c.keywords.some((k) => query.includes(k))) {
-          ciudadDetectada = c.nombre;
-          break;
-        }
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Error en la búsqueda");
       }
 
-      await addMessage(
-        ciudadDetectada
-          ? `Buscando ópticas en ${ciudadDetectada}...`
-          : "Buscando ópticas cerca de ti...",
-        400
-      );
+      const aiData = result.data;
 
-      let especialidadDetectada = "";
-      for (const esp of ESPECIALIDADES) {
-        if (query.includes(esp.nombre.toLowerCase()) || query.includes(esp.slug)) {
-          especialidadDetectada = esp.nombre;
-          break;
-        }
+      // 2. Mostrar los "pasos de pensamiento" que la IA generó
+      for (const paso of aiData.pasos_pensamiento) {
+        await addStreamingMessage(paso);
       }
 
-      if (especialidadDetectada) {
-        await addMessage(`Filtrando por especialidad: ${especialidadDetectada}...`, 500);
+      // 3. Aplicar los filtros que la IA extrajo a nuestra lista local de ópticas
+      let resultadosFiltrados = [...opticas];
+
+      if (aiData.filtros.ciudad) {
+        const ciudadLower = aiData.filtros.ciudad.toLowerCase();
+        resultadosFiltrados = resultadosFiltrados.filter((o) =>
+          (o.ciudad || "").toLowerCase().includes(ciudadLower) ||
+          (o.estado || "").toLowerCase().includes(ciudadLower)
+        );
+      }
+
+      if (aiData.filtros.especialidad) {
+        const espLower = aiData.filtros.especialidad.toLowerCase();
+        resultadosFiltrados = resultadosFiltrados.filter((o) =>
+          (o.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower))
+        );
+      }
+
+      if (aiData.filtros.seguro) {
+        const seguroLower = aiData.filtros.seguro.toLowerCase();
+        resultadosFiltrados = resultadosFiltrados.filter((o) =>
+          (o.segurosAceptados || []).some((s: string) => s.toLowerCase().includes(seguroLower))
+        );
+      }
+
+      // Si no hay coincidencias, mostramos el Top 3 por defecto
+      if (resultadosFiltrados.length === 0) {
+        resultadosFiltrados = opticasRanking.slice(0, 3);
       } else {
-        await addMessage("Analizando especialidades disponibles...", 500);
+        resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }
 
-      let seguroDetectado = "";
-      const seguros = ["gnp", "axa", "metlife", "seguro", "seguros"];
-      for (const s of seguros) {
-        if (query.includes(s)) {
-          seguroDetectado = s.toUpperCase();
-          break;
-        }
-      }
+      // 4. Mostrar mensaje final y resultados
+      await addStreamingMessage(aiData.mensaje_final);
 
-      if (seguroDetectado) {
-        await addMessage(`Verificando ópticas que acepten ${seguroDetectado}...`, 500);
-      }
-
-      await addMessage("Comparando calificaciones y horarios...", 600);
-
-      let resultados = [...opticas];
-
-      if (ciudadDetectada) {
-        resultados = resultados.filter(
-          (o) =>
-            (o.ciudad || "").toLowerCase().includes(ciudadDetectada.toLowerCase()) ||
-            (o.estado || "").toLowerCase().includes(ciudadDetectada.toLowerCase())
-        );
-      }
-
-      if (especialidadDetectada) {
-        resultados = resultados.filter((o) =>
-          (o.especialidades || []).some((e) => e.toLowerCase().includes(especialidadDetectada.toLowerCase()))
-        );
-      }
-
-      if (seguroDetectado) {
-        resultados = resultados.filter((o) =>
-          (o.segurosAceptados || []).some((s) => s.toLowerCase().includes(seguroDetectado.toLowerCase()))
-        );
-      }
-
-      if (resultados.length === 0) {
-        resultados = opticasRanking.slice(0, 3);
-      } else {
-        resultados = resultados.slice(0, 6);
-      }
-
-      const resumen = ciudadDetectada
-        ? `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} en ${ciudadDetectada}${especialidadDetectada ? ` especializadas en ${especialidadDetectada}` : ""}!`
-        : `¡Encontré ${resultados.length} óptica${resultados.length === 1 ? "" : "s"} que coinciden con tu búsqueda!`;
-
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      
-      setFranklinMessages((prev) => [...prev, { id: Date.now(), text: resumen, type: "success" }]);
-
-      setFranklinResults(resultados);
-      setFranklinSummary(resumen);
+      setFranklinResults(resultadosFiltrados);
+      setFranklinSummary(aiData.mensaje_final);
       setFranklinState("done");
 
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 500);
-    };
+
+    } catch (error) {
+      console.error("Error en Franklin:", error);
+      await addStreamingMessage("😔 Hubo un problema procesando tu búsqueda. Por favor, intenta de nuevo con otros términos.");
+      setFranklinState("done");
+    }
+  };
 
     ejecutarBusqueda();
   };
