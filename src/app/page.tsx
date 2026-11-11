@@ -8,7 +8,7 @@ import {
   ChevronRight, Award, Users,
   CheckCircle2, ArrowRight, Zap, Target,
   Building2, Store, Glasses, ScanEye, Baby,
-  Contact, EyeOff, Loader2, X
+  Contact, EyeOff, Loader2, X, Sun
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -99,15 +99,15 @@ function BannerPropio() {
             <div>
               <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">Publicidad</p>
               <h3 className="text-xl md:text-2xl font-bold text-navy-900 mb-2 font-display">
-                ¿Eres proveedor de lentes o armazones?
+                Eres proveedor de lentes o armazones?
               </h3>
               <p className="text-sm text-gray-700 max-w-xl">
-                Llega a miles de ópticas en todo México. Anúnciate en el directorio líder del sector óptico y aumenta tus ventas.
+                Llega a miles de opticas en todo Mexico. Anunciate en el directorio lider del sector optico y aumenta tus ventas.
               </p>
             </div>
           </div>
           <Link href="/contacto-publicidad" className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors flex-shrink-0 shadow-lg hover:shadow-xl flex items-center gap-2">
-            Conoce más <ArrowRight className="w-4 h-4" />
+            Conoce mas <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
@@ -115,13 +115,14 @@ function BannerPropio() {
   );
 }
 
+// NUEVAS 6 ESPECIALIDADES GLOBALES
 const ESPECIALIDADES = [
-  { nombre: "Optometría General", icono: Eye, slug: "optometria" },
+  { nombre: "Optometria General", icono: Eye, slug: "optometria" },
   { nombre: "Lentes de Contacto", icono: Contact, slug: "contactologia" },
-  { nombre: "Baja Visión", icono: EyeOff, slug: "baja-vision" },
-  { nombre: "Oftalmología Pediátrica", icono: Baby, slug: "pediatria" },
   { nombre: "Lentes Progresivos", icono: Glasses, slug: "progresivos" },
+  { nombre: "Lentes Antiblue", icono: Sun, slug: "antiblue" },
   { nombre: "Examen de la Vista", icono: ScanEye, slug: "examen-vista" },
+  { nombre: "Lentes Solares", icono: EyeOff, slug: "lentes-solares" },
 ];
 
 export default function HomePage() {
@@ -218,7 +219,7 @@ export default function HomePage() {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Error en la búsqueda");
+        throw new Error(result.error || "Error en la busqueda");
       }
 
       const aiData = result.data;
@@ -230,8 +231,9 @@ export default function HomePage() {
 
       let resultadosFiltrados = [...opticas];
       let hayCoincidenciasExactas = true;
+      let hayCoincidenciaEspecialidad = false;
 
-      // 1. FILTRADO ESTRICTO POR CIUDAD
+      // 1. FILTRADO POR CIUDAD
       if (ciudad) {
         const ciudadLower = ciudad.toLowerCase();
         const antes = resultadosFiltrados.length;
@@ -251,22 +253,36 @@ export default function HomePage() {
         }
       }
 
-      // 2. FILTRADO INTELIGENTE POR ESPECIALIDAD (Búsqueda por palabras clave)
+      // 2. FILTRADO POR ESPECIALIDAD (MEJORADO)
       if (especialidad) {
         const espLower = especialidad.toLowerCase().trim();
         const antes = resultadosFiltrados.length;
-        const palabrasClave = espLower.split(/\s+/).filter(p => p.length > 2);
+        
+        // Dividir en palabras clave (ignorar palabras cortas como "de", "la", "el")
+        const palabrasIgnorar = ["de", "la", "el", "los", "las", "un", "una", "y", "o"];
+        const palabrasClave = espLower.split(/\s+/).filter(p => p.length > 2 && !palabrasIgnorar.includes(p));
+        
+        // Si no hay palabras clave utiles, usar toda la frase
+        const terminosBusqueda = palabrasClave.length > 0 ? palabrasClave : [espLower];
         
         resultadosFiltrados = resultadosFiltrados.filter((o) => {
+          // Buscar en especialidades genéricas
           const coincideGenerica = (o.especialidades || []).some((e: string) => {
             const espNormalizada = e.toLowerCase();
-            return palabrasClave.some(palabra => espNormalizada.includes(palabra));
+            return terminosBusqueda.some(termino => espNormalizada.includes(termino));
           });
+          
+          // Buscar en especialidades personalizadas
           const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) => {
             const espNormalizada = e.toLowerCase();
-            return palabrasClave.some(palabra => espNormalizada.includes(palabra));
+            return terminosBusqueda.some(termino => espNormalizada.includes(termino));
           });
-          return coincideGenerica || coincidePersonalizada;
+          
+          if (coincideGenerica || coincidePersonalizada) {
+            hayCoincidenciaEspecialidad = true;
+            return true;
+          }
+          return false;
         });
 
         if (resultadosFiltrados.length === 0 && antes > 0) {
@@ -284,32 +300,53 @@ export default function HomePage() {
         );
       }
 
-      // 4. ORDENAMIENTO INTELIGENTE (SCORING)
+      // 4. ORDENAMIENTO INTELIGENTE (SCORING MEJORADO)
       if (especialidad || ciudad) {
         resultadosFiltrados.sort((a, b) => {
           let scoreA = 0;
           let scoreB = 0;
 
+          // Ventaja por Plan
           if (a.plan === 'premium_plus') scoreA += 30;
           else if (a.plan === 'premium') scoreA += 20;
           if (b.plan === 'premium_plus') scoreB += 30;
           else if (b.plan === 'premium') scoreB += 20;
 
+          // Ventaja por coincidencia en especialidad
           if (especialidad) {
             const espLower = especialidad.toLowerCase();
-            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
-            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
+            const palabrasIgnorar = ["de", "la", "el", "los", "las", "un", "una", "y", "o"];
+            const terminosBusqueda = espLower.split(/\s+/).filter(p => p.length > 2 && !palabrasIgnorar.includes(p));
+            const terminos = terminosBusqueda.length > 0 ? terminosBusqueda : [espLower];
+
+            // Coincidencia en especialidad personalizada (peso muy alto: +50)
+            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => {
+              const espNorm = e.toLowerCase();
+              return terminos.some(t => espNorm.includes(t));
+            });
+            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => {
+              const espNorm = e.toLowerCase();
+              return terminos.some(t => espNorm.includes(t));
+            });
             
-            if (aTienePersonalizada) scoreA += 25;
-            if (bTienePersonalizada) scoreB += 25;
+            if (aTienePersonalizada) scoreA += 50;
+            if (bTienePersonalizada) scoreB += 50;
 
-            const aTieneGenerica = (a.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower));
-            const bTieneGenerica = (b.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower));
+            // Coincidencia en especialidad generica (peso medio: +20)
+            const aTieneGenerica = (a.especialidades || []).some((e: string) => {
+              const espNorm = e.toLowerCase();
+              return terminos.some(t => espNorm.includes(t));
+            });
+            const bTieneGenerica = (b.especialidades || []).some((e: string) => {
+              const espNorm = e.toLowerCase();
+              return terminos.some(t => espNorm.includes(t));
+            });
 
-            if (aTieneGenerica && !aTienePersonalizada) scoreA += 10;
-            if (bTieneGenerica && !bTienePersonalizada) scoreB += 10;
+            if (aTieneGenerica && !aTienePersonalizada) scoreA += 20;
+            if (bTieneGenerica && !bTienePersonalizada) scoreB += 20;
           }
 
+          // Desempate por calificacion de Google
           scoreA += (a.calificacionGoogle || 0) * 2;
           scoreB += (b.calificacionGoogle || 0) * 2;
 
@@ -318,15 +355,19 @@ export default function HomePage() {
       }
 
       if (resultadosFiltrados.length === 0) {
-        await addStreamingMessage("No encontramos opticas que coincidan exactamente con tu busqueda. Te mostramos las mejores opciones disponibles.");
+        await addStreamingMessage("No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles.");
         resultadosFiltrados = opticasRanking.slice(0, 3);
       } else {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }
 
-      const resumenFinal = hayCoincidenciasExactas
-        ? aiData.mensaje_final
-        : `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || 'tu zona'}.`;
+      // Mensaje final inteligente
+      let resumenFinal = aiData.mensaje_final;
+      if (!hayCoincidenciasExactas) {
+        resumenFinal = `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || 'tu zona'}.`;
+      } else if (hayCoincidenciaEspecialidad) {
+        resumenFinal = `Encontre opticas con experiencia en ${especialidad}. Estas son las mejores opciones:`;
+      }
 
       setFranklinResults(resultadosFiltrados);
       setFranklinSummary(resumenFinal);
@@ -958,7 +999,7 @@ export default function HomePage() {
 
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">¿Tienes una optica?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Tienes una optica?</h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Unete al directorio mas completo de opticas en Mexico. Aumenta tu visibilidad y atrae mas clientes.
           </p>
