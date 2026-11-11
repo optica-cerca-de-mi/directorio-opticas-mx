@@ -45,6 +45,7 @@ export interface Optica {
   galeria?: string[];
   fotos?: string[]; // ✅ Agregado: alias para compatibilidad con el motor de ranking
   especialidades?: string[];
+  especialidadesPersonalizadas?: string[]; // ✅ AGREGAR ESTA LÍNEA AQUÍ
   segurosAceptados?: string[];
   linkResenasGoogle?: string;
   linkAgendarCita?: string;
