@@ -231,42 +231,52 @@ export default function HomePage() {
       let resultadosFiltrados = [...opticas];
       let hayCoincidenciasExactas = true;
 
+      // 1. FILTRADO ESTRICTO POR CIUDAD
       if (ciudad) {
         const ciudadLower = ciudad.toLowerCase();
         const antes = resultadosFiltrados.length;
-        resultadosFiltrados = resultadosFiltrados.filter((o) =>
-          (o.ciudad || "").toLowerCase().includes(ciudadLower) ||
-          (o.estado || "").toLowerCase().includes(ciudadLower)
-        );
-
+        
+        resultadosFiltrados = resultadosFiltrados.filter((o) => {
+          const ciudadOptica = (o.ciudad || "").toLowerCase();
+          const estadoOptica = (o.estado || "").toLowerCase();
+          return ciudadOptica.includes(ciudadLower) || 
+                 estadoOptica.includes(ciudadLower) ||
+                 ciudadLower.includes(ciudadOptica);
+        });
+        
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos ópticas en ${ciudad}, mostrando opciones cercanas...`);
+          await addStreamingMessage(`No encontramos opticas en ${ciudad}, mostrando opciones cercanas...`);
           resultadosFiltrados = [...opticas];
         }
       }
 
+      // 2. FILTRADO INTELIGENTE POR ESPECIALIDAD (Búsqueda por palabras clave)
       if (especialidad) {
         const espLower = especialidad.toLowerCase().trim();
         const antes = resultadosFiltrados.length;
-
+        const palabrasClave = espLower.split(/\s+/).filter(p => p.length > 2);
+        
         resultadosFiltrados = resultadosFiltrados.filter((o) => {
-          const coincideGenerica = (o.especialidades || []).some((e: string) =>
-            e.toLowerCase().includes(espLower) || espLower.includes(e.toLowerCase())
-          );
-          const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) =>
-            e.toLowerCase().includes(espLower) || espLower.includes(e.toLowerCase())
-          );
+          const coincideGenerica = (o.especialidades || []).some((e: string) => {
+            const espNormalizada = e.toLowerCase();
+            return palabrasClave.some(palabra => espNormalizada.includes(palabra));
+          });
+          const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) => {
+            const espNormalizada = e.toLowerCase();
+            return palabrasClave.some(palabra => espNormalizada.includes(palabra));
+          });
           return coincideGenerica || coincidePersonalizada;
         });
 
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos ópticas con "${especialidad}", mostrando opciones disponibles...`);
+          await addStreamingMessage(`No encontramos opticas con "${especialidad}", mostrando opciones disponibles...`);
           resultadosFiltrados = [...opticas];
         }
       }
 
+      // 3. FILTRADO POR SEGURO
       if (seguro) {
         const seguroLower = seguro.toLowerCase();
         resultadosFiltrados = resultadosFiltrados.filter((o) =>
@@ -274,6 +284,7 @@ export default function HomePage() {
         );
       }
 
+      // 4. ORDENAMIENTO INTELIGENTE (SCORING)
       if (especialidad || ciudad) {
         resultadosFiltrados.sort((a, b) => {
           let scoreA = 0;
@@ -281,28 +292,19 @@ export default function HomePage() {
 
           if (a.plan === 'premium_plus') scoreA += 30;
           else if (a.plan === 'premium') scoreA += 20;
-
           if (b.plan === 'premium_plus') scoreB += 30;
           else if (b.plan === 'premium') scoreB += 20;
 
           if (especialidad) {
             const espLower = especialidad.toLowerCase();
-            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) =>
-              e.toLowerCase() === espLower || e.toLowerCase().includes(espLower)
-            );
-            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) =>
-              e.toLowerCase() === espLower || e.toLowerCase().includes(espLower)
-            );
-
+            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
+            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
+            
             if (aTienePersonalizada) scoreA += 25;
             if (bTienePersonalizada) scoreB += 25;
 
-            const aTieneGenerica = (a.especialidades || []).some((e: string) =>
-              e.toLowerCase().includes(espLower)
-            );
-            const bTieneGenerica = (b.especialidades || []).some((e: string) =>
-              e.toLowerCase().includes(espLower)
-            );
+            const aTieneGenerica = (a.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower));
+            const bTieneGenerica = (b.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower));
 
             if (aTieneGenerica && !aTienePersonalizada) scoreA += 10;
             if (bTieneGenerica && !bTienePersonalizada) scoreB += 10;
@@ -316,7 +318,7 @@ export default function HomePage() {
       }
 
       if (resultadosFiltrados.length === 0) {
-        await addStreamingMessage("No encontramos ópticas que coincidan exactamente con tu búsqueda. Te mostramos las mejores opciones disponibles.");
+        await addStreamingMessage("No encontramos opticas que coincidan exactamente con tu busqueda. Te mostramos las mejores opciones disponibles.");
         resultadosFiltrados = opticasRanking.slice(0, 3);
       } else {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
@@ -336,7 +338,7 @@ export default function HomePage() {
 
     } catch (error) {
       console.error("Error en Franklin:", error);
-      await addStreamingMessage("Hubo un problema procesando tu búsqueda. Por favor, intenta de nuevo.");
+      await addStreamingMessage("Hubo un problema procesando tu busqueda. Por favor, intenta de nuevo.");
       setFranklinState("done");
     }
   };
@@ -351,7 +353,7 @@ export default function HomePage() {
 
   const badgesHumanos = [
     {
-      titulo: "La más recomendada", subtitulo: "Elegida por nuestra comunidad",
+      titulo: "La mas recomendada", subtitulo: "Elegida por nuestra comunidad",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -364,7 +366,7 @@ export default function HomePage() {
       icono: Award, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-50", textColor: "text-amber-900", borderColor: "border-amber-200",
     },
     {
-      titulo: "Calificación perfecta", subtitulo: "Excelencia comprobada",
+      titulo: "Calificacion perfecta", subtitulo: "Excelencia comprobada",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -391,18 +393,18 @@ export default function HomePage() {
   ];
 
   const beneficios = [
-    { icono: Search, titulo: "Encuentra rápido", descripcion: "Busca ópticas por ciudad, especialidad o seguro médico en segundos." },
-    { icono: Star, titulo: "Reseñas reales", descripcion: "Opiniones verificadas de pacientes reales para tomar la mejor decisión." },
-    { icono: MapPin, titulo: "Cerca de ti", descripcion: "Geolocalización inteligente para encontrar las ópticas más cercanas." },
-    { icono: ShieldCheck, titulo: "Ópticas verificadas", descripcion: "Todas las ópticas premium están verificadas y actualizadas." },
-    { icono: ChevronRight, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una óptica está abierta ahora mismo." },
+    { icono: Search, titulo: "Encuentra rapido", descripcion: "Busca opticas por ciudad, especialidad o seguro medico en segundos." },
+    { icono: Star, titulo: "Resenas reales", descripcion: "Opiniones verificadas de pacientes reales para tomar la mejor decision." },
+    { icono: MapPin, titulo: "Cerca de ti", descripcion: "Geolocalizacion inteligente para encontrar las opticas mas cercanas." },
+    { icono: ShieldCheck, titulo: "Opticas verificadas", descripcion: "Todas las opticas premium estan verificadas y actualizadas." },
+    { icono: ChevronRight, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una optica esta abierta ahora mismo." },
     { icono: MessageCircle, titulo: "Contacto directo", descripcion: "WhatsApp, llamada o Waze con un solo clic." },
   ];
 
   const razonesRecomendacion = [
-    { icono: Target, titulo: "Ranking inteligente", descripcion: "Nuestro algoritmo OptiRank analiza calificación, ubicación, horarios y completitud de ficha para recomendarte las mejores opciones." },
-    { icono: Users, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificación o exploración, y ajustamos el orden según lo que más te importa." },
-    { icono: Star, titulo: "Transparencia total", descripcion: "Mostramos reseñas reales de Google, horarios actualizados y toda la información que necesitas sin sorpresas." },
+    { icono: Target, titulo: "Ranking inteligente", descripcion: "Nuestro algoritmo OptiRank analiza calificacion, ubicacion, horarios y completitud de ficha para recomendarte las mejores opciones." },
+    { icono: Users, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificacion o exploracion, y ajustamos el orden segun lo que mas te importa." },
+    { icono: Star, titulo: "Transparencia total", descripcion: "Mostramos resenas reales de Google, horarios actualizados y toda la informacion que necesitas sin sorpresas." },
   ];
 
   if (loading) {
@@ -434,16 +436,16 @@ export default function HomePage() {
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-8 border border-white/20">
             <Sparkles className="w-4 h-4 text-gold-400" />
-            <span className="text-sm font-medium">El directorio #1 de ópticas en México</span>
+            <span className="text-sm font-medium">El directorio #1 de opticas en Mexico</span>
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold font-display mb-6 leading-tight">
-            Directorio de Ópticas en México:
+            Directorio de Opticas en Mexico:
             <span className="block text-gold-400 mt-2">Encuentra tu especialista visual cerca de ti</span>
           </h1>
 
           <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-            Reseñas reales, horarios en vivo y contacto directo. Tu próxima visita empieza aquí.
+            Resenas reales, horarios en vivo y contacto directo. Tu proxima visita empieza aqui.
           </p>
 
           <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-4 md:p-3 border border-gray-200">
@@ -462,7 +464,7 @@ export default function HomePage() {
                   </p>
                   <p className="text-[10px] text-gray-500 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                    Tecnología impulsada por Qwen AI
+                    Tecnologia impulsada por Qwen AI
                   </p>
                 </div>
               </div>
@@ -476,7 +478,7 @@ export default function HomePage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter") procesarConsultaFranklin();
                     }}
-                    placeholder="Ej: 'Necesito una óptica en Cuautitlán que acepte GNP...'"
+                    placeholder="Ej: 'Necesito una optica en Cuautitlan que acepte GNP...'"
                     className="w-full h-14 md:h-12 px-4 text-gray-800 placeholder-gray-400 bg-gray-50 md:bg-transparent border border-gray-200 md:border-0 rounded-xl md:rounded-none focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent text-base"
                   />
                 </div>
@@ -491,7 +493,7 @@ export default function HomePage() {
                   ) : (
                     <>
                       <Search className="w-5 h-5" />
-                      <span>Búsqueda Inteligente</span>
+                      <span>Busqueda Inteligente</span>
                     </>
                   )}
                 </button>
@@ -501,10 +503,10 @@ export default function HomePage() {
                 <p className="text-xs text-gray-500 mb-2">Prueba decir:</p>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => setFranklinQuery("Óptica con buen precio en CDMX")}
+                    onClick={() => setFranklinQuery("Optica con buen precio en CDMX")}
                     className="text-xs bg-gray-100 hover:bg-gray-200 text-navy-800 px-3 py-2 rounded-full transition-colors whitespace-nowrap"
                   >
-                    "Óptica con buen precio en CDMX"
+                    "Optica con buen precio en CDMX"
                   </button>
                   <button
                     onClick={() => setFranklinQuery("Especialista en lentes de contacto")}
@@ -520,7 +522,7 @@ export default function HomePage() {
           <div className="grid grid-cols-3 gap-4 md:gap-8 mt-16 max-w-2xl mx-auto border-t border-white/10 pt-8">
             <div className="text-center">
               <AnimatedCounter end={stats.totalOpticas} />
-              <div className="text-sm text-gray-400 mt-1">Ópticas registradas</div>
+              <div className="text-sm text-gray-400 mt-1">Opticas registradas</div>
             </div>
             <div className="text-center">
               <AnimatedCounter end={stats.totalCiudades} />
@@ -555,7 +557,7 @@ export default function HomePage() {
                   <button
                     onClick={resetFranklin}
                     className="text-gray-300 hover:text-white transition-colors"
-                    title="Nueva búsqueda"
+                    title="Nueva busqueda"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -672,7 +674,7 @@ export default function HomePage() {
                         href="/opticas"
                         className="inline-flex items-center gap-2 px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors shadow-md"
                       >
-                        Ver las {franklinResults.length} ópticas encontradas
+                        Ver las {franklinResults.length} opticas encontradas
                         <ArrowRight className="w-4 h-4" />
                       </Link>
                     </div>
@@ -691,7 +693,7 @@ export default function HomePage() {
               Encuentra Especialistas en Salud Visual
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Navega por especialidades y encuentra la óptica perfecta para tus necesidades específicas.
+              Navega por especialidades y encuentra la optica perfecta para tus necesidades especificas.
             </p>
           </div>
 
@@ -725,11 +727,11 @@ export default function HomePage() {
               <span className="text-sm font-semibold">Top 3 Recomendadas</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
-              Ópticas Mejor Valoradas por OptiRank
+              Opticas Mejor Valoradas por OptiRank
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Seleccionadas por nuestro algoritmo OptiRank basado en calificación, ubicación,
-              horarios y completitud de información.
+              Seleccionadas por nuestro algoritmo OptiRank basado en calificacion, ubicacion,
+              horarios y completitud de informacion.
             </p>
           </div>
 
@@ -832,7 +834,7 @@ export default function HomePage() {
 
           <div className="text-center mt-12">
             <Link href="/opticas" className="inline-flex items-center gap-2 px-8 py-4 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors shadow-lg">
-              Ver todas las ópticas <ArrowRight className="w-5 h-5" />
+              Ver todas las opticas <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
@@ -844,7 +846,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Todo lo que necesitas en un solo lugar</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la óptica ideal sin complicaciones.</p>
+            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la optica ideal sin complicaciones.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -869,11 +871,11 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-navy-100 text-navy-800 rounded-full mb-4">
               <Zap className="w-4 h-4" />
-              <span className="text-sm font-semibold">Tecnología OptiRank</span>
+              <span className="text-sm font-semibold">Tecnologia OptiRank</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Por qué las recomendamos</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Por que las recomendamos</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Nuestro sistema de ranking inteligente analiza múltiples factores para mostrarte las mejores opciones según lo que buscas.
+              Nuestro sistema de ranking inteligente analiza multiples factores para mostrarte las mejores opciones segun lo que buscas.
             </p>
           </div>
 
@@ -905,7 +907,7 @@ export default function HomePage() {
               Planes flexibles y Multi-Sucursales
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              Desde una única óptica hasta cadenas corporativas. Tenemos la solución perfecta para escalar tu visibilidad.
+              Desde una unica optica hasta cadenas corporativas. Tenemos la solucion perfecta para escalar tu visibilidad.
             </p>
           </div>
 
@@ -916,7 +918,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-navy-900 mb-2">Plan Free</h3>
               <p className="text-3xl font-bold text-navy-900 mb-2">$0</p>
-              <p className="text-sm text-gray-600">1 sucursal máxima. Presencia básica garantizada.</p>
+              <p className="text-sm text-gray-600">1 sucursal maxima. Presencia basica garantizada.</p>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-navy-900 shadow-lg text-center relative overflow-hidden">
@@ -926,7 +928,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-navy-900 mb-2">Premium / Premium+</h3>
               <p className="text-3xl font-bold text-navy-900 mb-2">Hasta 3</p>
-              <p className="text-sm text-gray-600">Sucursales máximas. Máxima visibilidad y herramientas de gestión.</p>
+              <p className="text-sm text-gray-600">Sucursales maximas. Maxima visibilidad y herramientas de gestion.</p>
             </div>
 
             <div className="bg-navy-900 p-6 rounded-2xl border border-navy-800 shadow-lg text-center text-white">
@@ -935,7 +937,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold mb-2">Corporativo</h3>
               <p className="text-3xl font-bold text-gold-400 mb-2">4+ Sucursales</p>
-              <p className="text-sm text-navy-200">Tarifas preferenciales, facturación consolidada y gestor dedicado.</p>
+              <p className="text-sm text-navy-200">Tarifas preferenciales, facturacion consolidada y gestor dedicado.</p>
             </div>
           </div>
 
@@ -956,13 +958,13 @@ export default function HomePage() {
 
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">¿Tienes una óptica?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">¿Tienes una optica?</h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Únete al directorio más completo de ópticas en México. Aumenta tu visibilidad y atrae más clientes.
+            Unete al directorio mas completo de opticas en Mexico. Aumenta tu visibilidad y atrae mas clientes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/registro" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg">
-              <Sparkles className="w-5 h-5" /> Registra tu óptica gratis
+              <Sparkles className="w-5 h-5" /> Registra tu optica gratis
             </Link>
             <Link href="/opticas" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20">
               Explorar directorio <ArrowRight className="w-5 h-5" />

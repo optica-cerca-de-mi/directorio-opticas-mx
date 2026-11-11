@@ -278,6 +278,10 @@ export function validateContent(
   const plan = PLANS_CONFIG[planId];
   const errors: string[] = [];
 
+if (content.especialidadesPersonalizadas && content.especialidadesPersonalizadas.length > plan.limites.maxEspecialidadesPersonalizadas) {
+  errors.push(`Maximo ${plan.limites.maxEspecialidadesPersonalizadas} especialidades personalizadas permitidas`);
+}
+
   if (content.descripcion && content.descripcion.length > plan.limites.maxCaracteresDescripcion) {
     errors.push(`La descripcion excede el limite de ${plan.limites.maxCaracteresDescripcion} caracteres`);
   }
