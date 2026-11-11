@@ -335,7 +335,10 @@ export default function HomePage() {
       await addStreamingMessage(aiData.mensaje_final);
 
       setFranklinResults(resultadosFiltrados);
-      setFranklinSummary(hayCoincidenciasExactas ? aiData.mensaje_final : "Mostrando opciones disponibles (no hay coincidencias exactas)");
+      const resumenFinal = hayCoincidenciasExactas 
+  ? aiData.mensaje_final 
+  : `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || 'tu zona'}.`;
+setFranklinSummary(resumenFinal);
       setFranklinState("done");
 
       setTimeout(() => {
