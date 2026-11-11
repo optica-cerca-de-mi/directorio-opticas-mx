@@ -4,11 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   Star, MapPin, ShieldCheck, Crown, Sparkles,
-  TrendingUp, Clock, Search, Eye, MessageCircle,
-  Phone, ChevronRight, Award, Heart, Users,
-  CheckCircle2, ArrowRight, Zap, Target, Eye as EyeIcon,
-  Building2, Globe, Store, Glasses, ScanEye, Baby,
-  Contact, Sun, EyeOff, Loader2, X
+  Search, Eye, MessageCircle,
+  ChevronRight, Award, Users,
+  CheckCircle2, ArrowRight, Zap, Target,
+  Building2, Store, Glasses, ScanEye, Baby,
+  Contact, EyeOff, Loader2, X
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -31,6 +31,7 @@ interface OpticaTop {
   calificacionGoogle?: number;
   numResenas?: number;
   especialidades?: string[];
+  especialidadesPersonalizadas?: string[];
   segurosAceptados?: string[];
   fotos?: Array<{ url: string }>;
   logo?: string;
@@ -151,7 +152,9 @@ export default function HomePage() {
             opticasData.push({
               id: doc.id, nombre, ciudad: data.ciudad, estado: data.estado, plan: data.plan || "free",
               calificacionGoogle: data.calificacionGoogle, numResenas: data.numResenas,
-              especialidades: data.especialidades || [], segurosAceptados: data.segurosAceptados || [],
+              especialidades: data.especialidades || [],
+              especialidadesPersonalizadas: data.especialidadesPersonalizadas || [],
+              segurosAceptados: data.segurosAceptados || [],
               fotos: data.fotos || [], logo: data.logo,
               slug: data.slug || doc.id, descripcion: data.descripcion, horarios: data.horarios || [],
               verificada: data.verificado || data.plan !== "free", whatsapp: data.whatsapp,
@@ -160,6 +163,7 @@ export default function HomePage() {
 
             if (data.ciudad) ciudadesSet.add(data.ciudad);
             (data.especialidades || []).forEach((e: string) => especialidadesSet.add(e));
+            (data.especialidadesPersonalizadas || []).forEach((e: string) => especialidadesSet.add(e));
           }
         });
 
@@ -182,7 +186,6 @@ export default function HomePage() {
 
   const top3 = opticasRanking.slice(0, 3);
 
-  // ✅ NUEVA FUNCIÓN: Conectada a la API real de Franklin con Groq AI
   const procesarConsultaFranklin = async () => {
     if (!franklinQuery.trim() || franklinState === "thinking") return;
 
@@ -199,7 +202,7 @@ export default function HomePage() {
       const msgId = Date.now() + Math.random();
       setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
       await new Promise((resolve) => setTimeout(resolve, 600));
-      setFranklinMessages((prev) => 
+      setFranklinMessages((prev) =>
         prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
       );
       await new Promise((resolve) => setTimeout(resolve, 300));
@@ -228,7 +231,6 @@ export default function HomePage() {
       let resultadosFiltrados = [...opticas];
       let hayCoincidenciasExactas = true;
 
-      // 1. FILTRADO ESTRICTO POR CIUDAD (si se especificó)
       if (ciudad) {
         const ciudadLower = ciudad.toLowerCase();
         const antes = resultadosFiltrados.length;
@@ -236,41 +238,35 @@ export default function HomePage() {
           (o.ciudad || "").toLowerCase().includes(ciudadLower) ||
           (o.estado || "").toLowerCase().includes(ciudadLower)
         );
-        
+
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
-          await addStreamingMessage(`⚠️ No encontramos ópticas en ${ciudad}, mostrando opciones cercanas...`);
-          resultadosFiltrados = [...opticas]; // Resetear para mostrar todas
+          await addStreamingMessage(`No encontramos ópticas en ${ciudad}, mostrando opciones cercanas...`);
+          resultadosFiltrados = [...opticas];
         }
       }
 
-      // 2. FILTRADO ESTRICTO POR ESPECIALIDAD (si se especificó)
       if (especialidad) {
         const espLower = especialidad.toLowerCase().trim();
         const antes = resultadosFiltrados.length;
-        
+
         resultadosFiltrados = resultadosFiltrados.filter((o) => {
-          // Buscar en especialidades genéricas
-          const coincideGenerica = (o.especialidades || []).some((e: string) => 
+          const coincideGenerica = (o.especialidades || []).some((e: string) =>
             e.toLowerCase().includes(espLower) || espLower.includes(e.toLowerCase())
           );
-          
-          // Buscar en especialidades personalizadas
-          const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) => 
+          const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) =>
             e.toLowerCase().includes(espLower) || espLower.includes(e.toLowerCase())
           );
-          
           return coincideGenerica || coincidePersonalizada;
         });
 
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
-          await addStreamingMessage(`⚠️ No encontramos ópticas con "${especialidad}", mostrando opciones disponibles...`);
-          resultadosFiltrados = [...opticas]; // Resetear
+          await addStreamingMessage(`No encontramos ópticas con "${especialidad}", mostrando opciones disponibles...`);
+          resultadosFiltrados = [...opticas];
         }
       }
 
-      // 3. FILTRADO POR SEGURO (si se especificó)
       if (seguro) {
         const seguroLower = seguro.toLowerCase();
         resultadosFiltrados = resultadosFiltrados.filter((o) =>
@@ -278,37 +274,33 @@ export default function HomePage() {
         );
       }
 
-      // 4. ORDENAMIENTO INTELIGENTE CON SCORING
       if (especialidad || ciudad) {
         resultadosFiltrados.sort((a, b) => {
           let scoreA = 0;
           let scoreB = 0;
 
-          // Ventaja por Plan (peso alto)
           if (a.plan === 'premium_plus') scoreA += 30;
           else if (a.plan === 'premium') scoreA += 20;
-          
+
           if (b.plan === 'premium_plus') scoreB += 30;
           else if (b.plan === 'premium') scoreB += 20;
 
-          // Ventaja por coincidencia EXACTA en especialidad personalizada (peso muy alto)
           if (especialidad) {
             const espLower = especialidad.toLowerCase();
-            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => 
+            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) =>
               e.toLowerCase() === espLower || e.toLowerCase().includes(espLower)
             );
-            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => 
+            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) =>
               e.toLowerCase() === espLower || e.toLowerCase().includes(espLower)
             );
-            
-            if (aTienePersonalizada) scoreA += 25; // Peso muy alto
+
+            if (aTienePersonalizada) scoreA += 25;
             if (bTienePersonalizada) scoreB += 25;
 
-            // Coincidencia en genéricas (peso medio)
-            const aTieneGenerica = (a.especialidades || []).some((e: string) => 
+            const aTieneGenerica = (a.especialidades || []).some((e: string) =>
               e.toLowerCase().includes(espLower)
             );
-            const bTieneGenerica = (b.especialidades || []).some((e: string) => 
+            const bTieneGenerica = (b.especialidades || []).some((e: string) =>
               e.toLowerCase().includes(espLower)
             );
 
@@ -316,7 +308,6 @@ export default function HomePage() {
             if (bTieneGenerica && !bTienePersonalizada) scoreB += 10;
           }
 
-          // Desempate por calificación de Google
           scoreA += (a.calificacionGoogle || 0) * 2;
           scoreB += (b.calificacionGoogle || 0) * 2;
 
@@ -324,7 +315,6 @@ export default function HomePage() {
         });
       }
 
-      // 5. LIMITAR RESULTADOS
       if (resultadosFiltrados.length === 0) {
         await addStreamingMessage("No encontramos ópticas que coincidan exactamente con tu búsqueda. Te mostramos las mejores opciones disponibles.");
         resultadosFiltrados = opticasRanking.slice(0, 3);
@@ -332,13 +322,12 @@ export default function HomePage() {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }
 
-      await addStreamingMessage(aiData.mensaje_final);
+      const resumenFinal = hayCoincidenciasExactas
+        ? aiData.mensaje_final
+        : `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || 'tu zona'}.`;
 
       setFranklinResults(resultadosFiltrados);
-      const resumenFinal = hayCoincidenciasExactas 
-  ? aiData.mensaje_final 
-  : `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || 'tu zona'}.`;
-setFranklinSummary(resumenFinal);
+      setFranklinSummary(resumenFinal);
       setFranklinState("done");
 
       setTimeout(() => {
@@ -406,14 +395,14 @@ setFranklinSummary(resumenFinal);
     { icono: Star, titulo: "Reseñas reales", descripcion: "Opiniones verificadas de pacientes reales para tomar la mejor decisión." },
     { icono: MapPin, titulo: "Cerca de ti", descripcion: "Geolocalización inteligente para encontrar las ópticas más cercanas." },
     { icono: ShieldCheck, titulo: "Ópticas verificadas", descripcion: "Todas las ópticas premium están verificadas y actualizadas." },
-    { icono: Clock, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una óptica está abierta ahora mismo." },
+    { icono: ChevronRight, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una óptica está abierta ahora mismo." },
     { icono: MessageCircle, titulo: "Contacto directo", descripcion: "WhatsApp, llamada o Waze con un solo clic." },
   ];
 
   const razonesRecomendacion = [
     { icono: Target, titulo: "Ranking inteligente", descripcion: "Nuestro algoritmo OptiRank analiza calificación, ubicación, horarios y completitud de ficha para recomendarte las mejores opciones." },
     { icono: Users, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificación o exploración, y ajustamos el orden según lo que más te importa." },
-    { icono: Heart, titulo: "Transparencia total", descripcion: "Mostramos reseñas reales de Google, horarios actualizados y toda la información que necesitas sin sorpresas." },
+    { icono: Star, titulo: "Transparencia total", descripcion: "Mostramos reseñas reales de Google, horarios actualizados y toda la información que necesitas sin sorpresas." },
   ];
 
   if (loading) {
@@ -429,7 +418,6 @@ setFranklinSummary(resumenFinal);
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Modal de Google Maps */}
       <GoogleMapsModal
         isOpen={mapsModal.isOpen}
         onClose={() => setMapsModal({ isOpen: false, optica: null })}
@@ -437,7 +425,6 @@ setFranklinSummary(resumenFinal);
         urlGoogleMaps={mapsModal.optica?.urlGoogleMaps || ""}
       />
 
-      {/* HERO SECTION CON FRANKLIN */}
       <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden pt-20 pb-28 md:pt-32 md:pb-36">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-gold-500 rounded-full blur-3xl"></div>
@@ -459,19 +446,16 @@ setFranklinSummary(resumenFinal);
             Reseñas reales, horarios en vivo y contacto directo. Tu próxima visita empieza aquí.
           </p>
 
-          {/* ✅ Buscador Conversacional Franklin - OPTIMIZADO MÓVIL */}
           <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-4 md:p-3 border border-gray-200">
             <div className="flex flex-col gap-3">
-              {/* Header con Franklin - Visible en móvil y desktop */}
               <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                {/* Ícono animado - Más grande en móvil */}
                 <div className="relative w-12 h-12 flex items-center justify-center flex-shrink-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
                   <div className="relative w-12 h-12 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
                     <Sparkles className="w-6 h-6 text-white drop-shadow-md" />
                   </div>
                 </div>
-                
+
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-base font-bold text-navy-900 font-display">
                     Franklin <span className="text-xs font-normal text-gray-500">AI</span>
@@ -483,7 +467,6 @@ setFranklinSummary(resumenFinal);
                 </div>
               </div>
 
-              {/* Input y Botón - Stack en móvil, row en desktop */}
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="flex-1 relative">
                   <input
@@ -514,7 +497,6 @@ setFranklinSummary(resumenFinal);
                 </button>
               </div>
 
-              {/* Sugerencias - Mejor espaciado en móvil */}
               <div className="pt-2 border-t border-gray-100">
                 <p className="text-xs text-gray-500 mb-2">Prueba decir:</p>
                 <div className="flex flex-wrap gap-2">
@@ -552,7 +534,6 @@ setFranklinSummary(resumenFinal);
         </div>
       </section>
 
-      {/* PANEL DE RESULTADOS DE FRANKLIN */}
       {(franklinState === "thinking" || franklinState === "done") && (
         <section ref={resultsRef} className="py-16 bg-gradient-to-br from-gold-50 to-white border-b border-gold-200">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -586,8 +567,8 @@ setFranklinSummary(resumenFinal);
                   <div
                     key={msg.id}
                     className={`flex items-start gap-3 transition-all duration-500 ${
-                      msg.type === "success" 
-                        ? "bg-green-50 border border-green-200 rounded-lg p-3" 
+                      msg.type === "success"
+                        ? "bg-green-50 border border-green-200 rounded-lg p-3"
                         : "py-1"
                     }`}
                     style={{ animation: "fadeIn 0.4s ease-out" }}
@@ -703,7 +684,6 @@ setFranklinSummary(resumenFinal);
         </section>
       )}
 
-      {/* Grid de Especialidades */}
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -737,7 +717,6 @@ setFranklinSummary(resumenFinal);
         </div>
       </section>
 
-      {/* TOP 3 ÓPTICAS RECOMENDADAS */}
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -861,7 +840,6 @@ setFranklinSummary(resumenFinal);
 
       <AdSlot slotId="home-between-1" />
 
-      {/* BENEFICIOS */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -886,7 +864,6 @@ setFranklinSummary(resumenFinal);
         </div>
       </section>
 
-      {/* POR QUÉ LA RECOMENDAMOS */}
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -917,7 +894,6 @@ setFranklinSummary(resumenFinal);
         </div>
       </section>
 
-      {/* PLANES Y MULTI-SUCURSALES */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-gold-50 via-white to-amber-50 border-y border-gold-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -978,7 +954,6 @@ setFranklinSummary(resumenFinal);
 
       <BannerPropio />
 
-      {/* CTA FINAL */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">¿Tienes una óptica?</h2>
