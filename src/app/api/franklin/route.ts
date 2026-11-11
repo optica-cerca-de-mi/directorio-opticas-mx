@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-           model: 'llama-3.1-8b-instant', // Modelo actual, ultra-rápido y 100% estable en Groq
+           model: 'llama3-8b-8192', // El modelo más estable y siempre disponible en Groq Free Tier
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: query }
