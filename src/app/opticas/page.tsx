@@ -149,33 +149,42 @@ export default function OpticasPage() {
     window.location.href = currentUrl.toString();
   };
 
-  // ✅ FILTRADO INTELIGENTE Y EFICIENTE
-  const opticasFiltradas = opticas.filter((optica) => {
-    const busquedaLower = busqueda.toLowerCase().trim();
-    
-    // 1. Búsqueda de texto libre en MÚLTIPLES campos
-    const coincideBusqueda = !busquedaLower || 
-      optica.nombre.toLowerCase().includes(busquedaLower) ||
-      optica.ciudad.toLowerCase().includes(busquedaLower) ||
-      optica.direccion.toLowerCase().includes(busquedaLower) ||
-      (optica.descripcion || "").toLowerCase().includes(busquedaLower) ||
-      (optica.especialidades || []).some(e => e.toLowerCase().includes(busquedaLower)) ||
-      (optica.especialidadesPersonalizadas || []).some(e => e.toLowerCase().includes(busquedaLower)) ||
-      (optica.segurosAceptados || []).some(s => s.toLowerCase().includes(busquedaLower));
+// ✅ FUNCIÓN HELPER: Normalizar texto (eliminar acentos)
+const normalizarTexto = (texto: string): string => {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+};
 
-    // 2. Filtro de especialidad en AMBOS arrays (genéricas y personalizadas)
-    const coincideEspecialidad = !filtroEspecialidad || 
-      (optica.especialidades || []).includes(filtroEspecialidad) ||
-      (optica.especialidadesPersonalizadas || []).includes(filtroEspecialidad);
-      
-    // 3. Filtro de seguro
-    const coincideSeguro = !filtroSeguro || (optica.segurosAceptados || []).includes(filtroSeguro);
-    
-    // 4. Filtro de horario
-    const coincideAbierta = !abiertasAhora || estaAbiertaEn(optica.horarios || []).abierta;
+// ✅ FILTRADO INTELIGENTE Y EFICIENTE
+const opticasFiltradas = opticas.filter((optica) => {
+  const busquedaNormalizada = normalizarTexto(busqueda);
+  
+  // 1. Búsqueda de texto libre en MÚLTIPLES campos (con normalización)
+  const coincideBusqueda = !busquedaNormalizada || 
+    normalizarTexto(optica.nombre).includes(busquedaNormalizada) ||
+    normalizarTexto(optica.ciudad).includes(busquedaNormalizada) ||
+    normalizarTexto(optica.direccion).includes(busquedaNormalizada) ||
+    normalizarTexto(optica.descripcion || '').includes(busquedaNormalizada) ||
+    (optica.especialidades || []).some(e => normalizarTexto(e).includes(busquedaNormalizada)) ||
+    (optica.especialidadesPersonalizadas || []).some(e => normalizarTexto(e).includes(busquedaNormalizada)) ||
+    (optica.segurosAceptados || []).some(s => normalizarTexto(s).includes(busquedaNormalizada));
 
-    return coincideBusqueda && coincideSeguro && coincideEspecialidad && coincideAbierta;
-  });
+  // 2. Filtro de especialidad en AMBOS arrays (con normalización)
+  const coincideEspecialidad = !filtroEspecialidad || 
+    normalizarTexto(optica.especialidades || []).includes(normalizarTexto(filtroEspecialidad)) ||
+    normalizarTexto(optica.especialidadesPersonalizadas || []).includes(normalizarTexto(filtroEspecialidad));
+    
+  // 3. Filtro de seguro (con normalización)
+  const coincideSeguro = !filtroSeguro || 
+    normalizarTexto(optica.segurosAceptados || []).includes(normalizarTexto(filtroSeguro));
+  
+  // 4. Filtro de horario
+  const coincideAbierta = !abiertasAhora || estaAbiertaEn(optica.horarios || []).abierta;
+
+  return coincideBusqueda && coincideSeguro && coincideEspecialidad && coincideAbierta;
+});
 
   const {
     opticasRanking,
