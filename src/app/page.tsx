@@ -182,6 +182,7 @@ export default function HomePage() {
 
   const top3 = opticasRanking.slice(0, 3);
 
+  // ✅ NUEVA FUNCIÓN: Conectada a la API real de Franklin con Groq AI
   const procesarConsultaFranklin = async () => {
     if (!franklinQuery.trim() || franklinState === "thinking") return;
 
@@ -277,9 +278,6 @@ export default function HomePage() {
       await addStreamingMessage("😔 Hubo un problema procesando tu búsqueda. Por favor, intenta de nuevo con otros términos.");
       setFranklinState("done");
     }
-  };
-
-    ejecutarBusqueda();
   };
 
   const resetFranklin = () => {
