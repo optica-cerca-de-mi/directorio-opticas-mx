@@ -195,14 +195,10 @@ export default function HomePage() {
       resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
 
-    // Función auxiliar para mostrar mensajes paso a paso (UX de streaming)
     const addStreamingMessage = async (text: string) => {
       const msgId = Date.now() + Math.random();
       setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
-      
-      // Pequeña pausa natural para que se sienta como si estuviera "pensando"
       await new Promise((resolve) => setTimeout(resolve, 600));
-      
       setFranklinMessages((prev) => 
         prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
       );
@@ -210,7 +206,6 @@ export default function HomePage() {
     };
 
     try {
-      // 1. Llamar a nuestra API real de Franklin
       const response = await fetch('/api/franklin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,14 +220,13 @@ export default function HomePage() {
 
       const aiData = result.data;
 
-      // 2. Mostrar los "pasos de pensamiento" que la IA generó
       for (const paso of aiData.pasos_pensamiento) {
         await addStreamingMessage(paso);
       }
 
-      // 3. Aplicar los filtros que la IA extrajo a nuestra lista local de ópticas
       let resultadosFiltrados = [...opticas];
 
+      // 1. FILTRADO: Coincidencia en genéricas O personalizadas
       if (aiData.filtros.ciudad) {
         const ciudadLower = aiData.filtros.ciudad.toLowerCase();
         resultadosFiltrados = resultadosFiltrados.filter((o) =>
@@ -244,7 +238,8 @@ export default function HomePage() {
       if (aiData.filtros.especialidad) {
         const espLower = aiData.filtros.especialidad.toLowerCase();
         resultadosFiltrados = resultadosFiltrados.filter((o) =>
-          (o.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower))
+          (o.especialidades || []).some((e: string) => e.toLowerCase().includes(espLower)) ||
+          (o.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower))
         );
       }
 
@@ -255,6 +250,35 @@ export default function HomePage() {
         );
       }
 
+      // 2. ORDENAMIENTO INTELIGENTE (SCORING): Da ventaja a Premium y especialidades personalizadas
+      if (aiData.filtros.especialidad) {
+        const espLower = aiData.filtros.especialidad.toLowerCase();
+        resultadosFiltrados.sort((a, b) => {
+          let scoreA = 0;
+          let scoreB = 0;
+
+          // Ventaja por Plan
+          if (a.plan === 'premium_plus') scoreA += 30;
+          else if (a.plan === 'premium') scoreA += 20;
+          
+          if (b.plan === 'premium_plus') scoreB += 30;
+          else if (b.plan === 'premium') scoreB += 20;
+
+          // Ventaja por coincidencia en especialidad personalizada (más relevante)
+          const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
+          const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => e.toLowerCase().includes(espLower));
+          
+          if (aTienePersonalizada) scoreA += 15;
+          if (bTienePersonalizada) scoreB += 15;
+
+          // Desempate por calificación de Google
+          scoreA += (a.calificacionGoogle || 0) * 2;
+          scoreB += (b.calificacionGoogle || 0) * 2;
+
+          return scoreB - scoreA; // Orden descendente (mayor score primero)
+        });
+      }
+
       // Si no hay coincidencias, mostramos el Top 3 por defecto
       if (resultadosFiltrados.length === 0) {
         resultadosFiltrados = opticasRanking.slice(0, 3);
@@ -262,7 +286,6 @@ export default function HomePage() {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }
 
-      // 4. Mostrar mensaje final y resultados
       await addStreamingMessage(aiData.mensaje_final);
 
       setFranklinResults(resultadosFiltrados);

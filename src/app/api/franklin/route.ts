@@ -9,7 +9,7 @@ const DIRECTORIO_CONTEXTO = {
     'Guadalajara', 'Monterrey', 'Puebla', 'Querétaro', 'Mérida', 'Cancún', 
     'Tijuana', 'Toluca', 'Aguascalientes', 'León', 'San Luis Potosí'
   ],
-  especialidades: [
+  especialidadesGenericas: [
     'Optometría General', 'Lentes de Contacto', 'Lentes Progresivos', 
     'Oftalmología Pediátrica', 'Baja Visión', 'Examen de la Vista', 
     'Cirugía Refractiva', 'Lentes para Computadora', 'Ortoqueratología'
@@ -28,12 +28,13 @@ Tu único objetivo es analizar la consulta del usuario y extraer filtros de bús
 
 CONTEXTO DEL DIRECTORIO:
 - Ciudades disponibles: ${DIRECTORIO_CONTEXTO.ciudades.join(', ')}
-- Especialidades: ${DIRECTORIO_CONTEXTO.especialidades.join(', ')}
+- Especialidades Genéricas: ${DIRECTORIO_CONTEXTO.especialidadesGenericas.join(', ')}
+- Especialidades Personalizadas: Las ópticas pueden tener especialidades únicas y personalizadas (ej: Ortoqueratología, Lentes para ciclismo, Atención a domicilio, Lentes deportivos). Extrae cualquier especialidad específica que el usuario mencione.
 - Seguros: ${DIRECTORIO_CONTEXTO.seguros.join(', ')}
 
 REGLAS DE EXTRACCIÓN:
 1. ciudad: Normaliza la ubicación a una de las ciudades de la lista. (Ej: "cerca de Perinorte" -> "Cuautitlán Izcalli", "DF" -> "CDMX"). Si no hay ciudad, usa null.
-2. especialidad: Normaliza a una de la lista. (Ej: "lentes para niños" -> "Oftalmología Pediátrica"). Si no hay, usa null.
+2. especialidad: Extrae la especialidad o servicio específico que menciona el usuario. Puede ser una genérica o una personalizada. Normaliza el texto lo mejor posible. Si no hay, usa null.
 3. seguro: Normaliza a uno de la lista. Si no hay, usa null.
 4. precio: "low" (barato, económico, buen precio), "medium" (normal, estándar), "high" (premium, lujo, diseñador). Si no se menciona, usa null.
 5. ordenar_por: "rating" (la mejor, top, mejor calificada), "precio" (más barato, menor precio), "relevancia" (default).
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Llamada a la API de Groq (compatible con OpenAI)
+    // Llamada a la API de Groq
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -87,14 +88,14 @@ export async function POST(req: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-           model: 'qwen/qwen3.8-27b', // Modelo Qwen en Groq: rápido, entiende español perfecto y es 100% gratuito
+        model: 'qwen/qwen3.8-27b',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: query }
         ],
-        temperature: 0.2, // Baja temperatura = respuestas más deterministas
+        temperature: 0.2,
         max_tokens: 500,
-        response_format: { type: 'json_object' }, // Fuerza salida JSON
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -107,13 +108,11 @@ export async function POST(req: NextRequest) {
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    // Parsear y validar el JSON de respuesta
     let parsedResponse;
     try {
       parsedResponse = JSON.parse(content);
     } catch (parseError) {
       console.error('❌ La IA no devolvió un JSON válido:', content);
-      // Fallback de emergencia
       parsedResponse = {
         filtros: { ciudad: null, especialidad: null, seguro: null, precio: null, ordenar_por: 'relevancia', abierto_ahora: false },
         pasos_pensamiento: ['🔍 Analizando tu búsqueda...', '✨ Buscando las mejores opciones...'],
@@ -121,7 +120,6 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Devolver la respuesta al frontend
     return NextResponse.json({
       success: true,
       data: parsedResponse,
