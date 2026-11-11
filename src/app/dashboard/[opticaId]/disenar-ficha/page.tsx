@@ -3,8 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  ArrowLeft, CheckCircle2, Clock, Phone, MessageCircle, 
+import {
+  ArrowLeft, CheckCircle2, Clock, Phone, MessageCircle,
   Mail, MapPin, Star, ShieldCheck, Lock, Sparkles, Image as ImageIcon,
   Video, Palette, Crown, AlertCircle, Upload, X, Plus, Eye,
   GripVertical, Trash2, Edit3, Save, Calendar, Tag, TrendingUp,
@@ -15,11 +15,11 @@ import { db } from "@/lib/firebase";
 import { getPlanConfig, PlanType } from "@/lib/plans-config";
 import Editor from "@/components/Editor";
 import { deleteImageFromCloudinary } from "@/lib/cloudinary";
-import UploadVideo from "@/components/UploadVideo"; // ← NUEVO
+import UploadVideo from "@/components/UploadVideo";
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // TIPOS
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 interface Horario {
   dia: string;
@@ -54,7 +54,6 @@ interface Promocion {
   activa: boolean;
 }
 
-// ✅ ACTUALIZADO: imagen puede ser string u objeto
 interface HeroConfig {
   imagen: string | { url: string; publicId?: string };
   colorOverlay: string;
@@ -94,6 +93,7 @@ interface OpticaData {
   plan?: PlanType;
   descripcion?: string;
   especialidades?: string[];
+  especialidadesPersonalizadas?: string[]; // ✅ NUEVO: Para planes Premium/Premium+
   segurosAceptados?: string[];
   horarios?: Horario[];
   fotos?: Foto[];
@@ -122,15 +122,15 @@ type SeccionActiva = "hero" | "info" | "galeria" | "video" | "productos" | "prom
 
 type ImageUploadData = string | { url: string; publicId?: string };
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // FUNCIONES AUXILIARES
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 function sanitizeForFirebase(obj: any): any {
   if (obj === null || obj === undefined) return null;
   if (typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) return obj.map(sanitizeForFirebase);
-  
+
   const result: any = {};
   for (const key in obj) {
     if (obj[key] === undefined) {
@@ -176,32 +176,24 @@ const getFotoPublicId = (foto: Foto): string => {
   return foto?.publicId || '';
 };
 
-// ✅ NUEVO: Helper para obtener URL de hero.imagen (string u objeto)
 const getHeroImagenUrl = (imagen: string | { url: string; publicId?: string } | undefined): string => {
   if (!imagen) return '';
   if (typeof imagen === 'string') return imagen;
   return imagen?.url || '';
 };
 
-// ✅ NUEVO: Helper para obtener publicId de hero.imagen
-const getHeroImagenPublicId = (imagen: string | { url: string; publicId?: string } | undefined): string => {
-  if (!imagen) return '';
-  if (typeof imagen === 'string') return '';
-  return imagen?.publicId || '';
-};
-
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // COMPONENTE: Upload de imagen
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
-function UploadImagen({ 
-  value, 
-  onChange, 
+function UploadImagen({
+  value,
+  onChange,
   label = "Subir imagen",
   recomendacion = "JPG, PNG (máx 5MB)",
-  onRemove // ✅ NUEVO: Callback para eliminar de Cloudinary
-}: { 
-  value?: ImageUploadData; 
+  onRemove
+}: {
+  value?: ImageUploadData;
   onChange: (data: ImageUploadData) => void;
   label?: string;
   recomendacion?: string;
@@ -229,9 +221,9 @@ function UploadImagen({
       const datos = await respuesta.json();
 
       if (respuesta.ok && datos.success) {
-        onChange({ 
-          url: datos.url, 
-          publicId: datos.publicId || "" 
+        onChange({
+          url: datos.url,
+          publicId: datos.publicId || ""
         });
       } else {
         alert(`Error al subir: ${datos.error || 'Error desconocido'}`);
@@ -286,7 +278,7 @@ function UploadImagen({
           </button>
         </div>
       ) : (
-        <div 
+        <div
           onClick={() => inputRef.current?.click()}
           className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-navy-500 transition-colors cursor-pointer"
         >
@@ -308,9 +300,9 @@ function UploadImagen({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // COMPONENTES AUXILIARES
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 function LockedField({ feature, requiredPlan, opticaId }: { feature: string; requiredPlan: string; opticaId: string }) {
   return (
@@ -376,15 +368,18 @@ function AutoSaveIndicator({ status }: { status: SaveStatus }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // DATOS MAESTROS
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
-const ESPECIALIDADES_DISPONIBLES = [
-  "Examen de la vista gratis", "Entrega en 1 hora", "Graduaciones altas",
-  "Lentes de contacto", "Lentes de sol", "Armazones de marca",
-  "Lentes para niños", "Lentes deportivos", "Filtro de luz azul",
-  "Lentes progresivos", "Atención a domicilio", "Reparación de armazones"
+// ✅ ESPECIALIDADES GENÉRICAS (Disponibles para todos los planes)
+const ESPECIALIDADES_GENERICAS = [
+  "Optometría General",
+  "Lentes de Contacto",
+  "Lentes Progresivos",
+  "Lentes Antiblue",
+  "Examen de la Vista",
+  "Lentes Solares"
 ];
 
 const SEGUROS_DISPONIBLES = ["AUNA", "GNP Seguros", "MetLife", "AXA", "Seguros Monterrey", "Zurich", "Allianz"];
@@ -408,9 +403,9 @@ const TIPOS_BLOQUE = [
   { tipo: 'banner' as const, label: 'Banner promocional', icon: Megaphone, descripcion: 'Banner con CTA y colores personalizados' },
 ];
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
 
 export default function DisenarFicha() {
   const params = useParams();
@@ -422,6 +417,9 @@ export default function DisenarFicha() {
   const [seccionActiva, setSeccionActiva] = useState<SeccionActiva>("hero");
   const [bloqueEditando, setBloqueEditando] = useState<string | null>(null);
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
+  
+  // ✅ Estado para especialidades personalizadas
+  const [nuevaEspecialidad, setNuevaEspecialidad] = useState("");
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -439,12 +437,13 @@ export default function DisenarFicha() {
           if (!data.promociones) data.promociones = [];
           if (!data.hero) data.hero = { imagen: "", colorOverlay: "#000000", titulo: "", subtitulo: "" };
           if (!data.bloquesContenido) data.bloquesContenido = [];
+          if (!data.especialidadesPersonalizadas) data.especialidadesPersonalizadas = [];
           setOptica(data);
         } else {
           router.push("/dashboard");
         }
       } catch (error) {
-        console.error(" Error al cargar:", error);
+        console.error("Error al cargar:", error);
       } finally {
         setLoading(false);
       }
@@ -481,15 +480,14 @@ export default function DisenarFicha() {
     setHasChanges(true);
   }, []);
 
-  // ✅ Función para eliminar foto de galería + Cloudinary (maneja ambos formatos)
   const eliminarFotoGaleria = useCallback(async (index: number) => {
     const fotoAEliminar = optica?.fotos?.[index];
     const publicId = getFotoPublicId(fotoAEliminar);
-    
+
     if (publicId) {
       await deleteImageFromCloudinary(publicId);
     }
-    
+
     const nuevasFotos = optica?.fotos?.filter((_, i) => i !== index);
     updateField("fotos", nuevasFotos);
   }, [optica?.fotos, updateField]);
@@ -530,7 +528,7 @@ export default function DisenarFicha() {
   };
 
   const actualizarBloque = (bloqueId: string, datos: Partial<BloqueContenido['datos']>) => {
-    const nuevosBloques = optica?.bloquesContenido?.map(b => 
+    const nuevosBloques = optica?.bloquesContenido?.map(b =>
       b.id === bloqueId ? { ...b, datos: { ...b.datos, ...datos } } : b
     ) || [];
     updateField("bloquesContenido", nuevosBloques);
@@ -579,6 +577,29 @@ export default function DisenarFicha() {
     updateField("bloquesContenido", nuevos);
   };
   const handleDragEnd = () => setDraggedBlock(null);
+
+  // ✅ Lógica para especialidades personalizadas
+  const maxPersonalizadas = optica?.plan === 'premium' ? 5 : (optica?.plan === 'premium_plus' ? 999 : 0);
+  const currentPersonalizadas = optica?.especialidadesPersonalizadas || [];
+  const puedeAgregarPersonalizada = currentPersonalizadas.length < maxPersonalizadas;
+
+  const agregarEspecialidadPersonalizada = () => {
+    if (!nuevaEspecialidad.trim()) return;
+    if (currentPersonalizadas.length >= maxPersonalizadas) {
+      alert(`Has alcanzado el límite de ${maxPersonalizadas} especialidades personalizadas para tu plan.`);
+      return;
+    }
+    if (currentPersonalizadas.includes(nuevaEspecialidad.trim())) {
+      alert("Esta especialidad ya fue agregada.");
+      return;
+    }
+    updateField("especialidadesPersonalizadas", [...currentPersonalizadas, nuevaEspecialidad.trim()]);
+    setNuevaEspecialidad("");
+  };
+
+  const eliminarEspecialidadPersonalizada = (esp: string) => {
+    updateField("especialidadesPersonalizadas", currentPersonalizadas.filter(e => e !== esp));
+  };
 
   if (loading) {
     return (
@@ -650,7 +671,7 @@ export default function DisenarFicha() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          
+
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-24">
@@ -680,7 +701,7 @@ export default function DisenarFicha() {
           {/* Área de edición */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              
+
               {/* SECCIÓN: HERO */}
               {seccionActiva === "hero" && (
                 <div className="space-y-6">
@@ -710,40 +731,40 @@ export default function DisenarFicha() {
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Color del overlay</label>
                         <div className="flex items-center gap-3">
-                          <input 
-                            type="color" 
-                            value={optica.hero?.colorOverlay || "#000000"} 
-                            onChange={(e) => updateField("hero", { ...optica.hero, colorOverlay: e.target.value })} 
-                            className="w-16 h-12 rounded-lg border border-gray-300 cursor-pointer" 
+                          <input
+                            type="color"
+                            value={optica.hero?.colorOverlay || "#000000"}
+                            onChange={(e) => updateField("hero", { ...optica.hero, colorOverlay: e.target.value })}
+                            className="w-16 h-12 rounded-lg border border-gray-300 cursor-pointer"
                           />
-                          <input 
-                            type="text" 
-                            value={optica.hero?.colorOverlay || "#000000"} 
-                            onChange={(e) => updateField("hero", { ...optica.hero, colorOverlay: e.target.value })} 
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" 
+                          <input
+                            type="text"
+                            value={optica.hero?.colorOverlay || "#000000"}
+                            onChange={(e) => updateField("hero", { ...optica.hero, colorOverlay: e.target.value })}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
                           />
                         </div>
                       </div>
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Título del hero</label>
-                        <input 
-                          type="text" 
-                          value={optica.hero?.titulo || ""} 
-                          onChange={(e) => updateField("hero", { ...optica.hero, titulo: e.target.value })} 
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-                          placeholder="Ej: Tu visión, nuestra pasión" 
+                        <input
+                          type="text"
+                          value={optica.hero?.titulo || ""}
+                          onChange={(e) => updateField("hero", { ...optica.hero, titulo: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          placeholder="Ej: Tu visión, nuestra pasión"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Subtítulo</label>
-                        <textarea 
-                          value={optica.hero?.subtitulo || ""} 
-                          onChange={(e) => updateField("hero", { ...optica.hero, subtitulo: e.target.value })} 
-                          rows={2} 
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none" 
-                          placeholder="Describe tu óptica en una frase" 
+                        <textarea
+                          value={optica.hero?.subtitulo || ""}
+                          onChange={(e) => updateField("hero", { ...optica.hero, subtitulo: e.target.value })}
+                          rows={2}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none"
+                          placeholder="Describe tu óptica en una frase"
                         />
                       </div>
                     </>
@@ -776,7 +797,7 @@ export default function DisenarFicha() {
                           const isEditing = bloqueEditando === bloque.id;
 
                           return (
-                            <div 
+                            <div
                               key={bloque.id}
                               draggable
                               onDragStart={() => handleDragStart(bloque.id)}
@@ -818,9 +839,9 @@ export default function DisenarFicha() {
                                 <div className="p-4 space-y-4">
                                   <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">Título</label>
-                                    <input 
-                                      type="text" 
-                                      value={bloque.datos.titulo || ''} 
+                                    <input
+                                      type="text"
+                                      value={bloque.datos.titulo || ''}
                                       onChange={(e) => actualizarBloque(bloque.id, { titulo: e.target.value })}
                                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                       placeholder="Título del bloque"
@@ -830,8 +851,8 @@ export default function DisenarFicha() {
                                   {bloque.tipo === 'texto' && (
                                     <div>
                                       <label className="block text-sm font-semibold text-gray-700 mb-2">Contenido</label>
-                                      <Editor 
-                                        content={bloque.datos.contenido || ''} 
+                                      <Editor
+                                        content={bloque.datos.contenido || ''}
                                         onChange={(html) => actualizarBloque(bloque.id, { contenido: html })}
                                         placeholder="Escribe tu contenido aquí..."
                                       />
@@ -851,8 +872,8 @@ export default function DisenarFicha() {
                                       </div>
                                       <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Texto descriptivo</label>
-                                        <Editor 
-                                          content={bloque.datos.contenido || ''} 
+                                        <Editor
+                                          content={bloque.datos.contenido || ''}
                                           onChange={(html) => actualizarBloque(bloque.id, { contenido: html })}
                                           placeholder="Describe la imagen..."
                                         />
@@ -865,8 +886,8 @@ export default function DisenarFicha() {
                                               key={layout}
                                               onClick={() => actualizarBloque(bloque.id, { layout })}
                                               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                                bloque.datos.layout === layout 
-                                                  ? 'bg-navy-900 text-white' 
+                                                bloque.datos.layout === layout
+                                                  ? 'bg-navy-900 text-white'
                                                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                               }`}
                                             >
@@ -881,9 +902,9 @@ export default function DisenarFicha() {
                                   {bloque.tipo === 'video' && (
                                     <div>
                                       <label className="block text-sm font-semibold text-gray-700 mb-2">URL del video (YouTube o Vimeo)</label>
-                                      <input 
-                                        type="url" 
-                                        value={bloque.datos.videoUrl || ''} 
+                                      <input
+                                        type="url"
+                                        value={bloque.datos.videoUrl || ''}
                                         onChange={(e) => actualizarBloque(bloque.id, { videoUrl: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                         placeholder="https://youtube.com/watch?v=..."
@@ -905,9 +926,9 @@ export default function DisenarFicha() {
                                       <label className="block text-sm font-semibold text-gray-700">Preguntas y respuestas</label>
                                       {(bloque.datos.preguntas || []).map((pq, i) => (
                                         <div key={i} className="p-3 bg-gray-50 rounded-lg space-y-2">
-                                          <input 
-                                            type="text" 
-                                            value={pq.pregunta} 
+                                          <input
+                                            type="text"
+                                            value={pq.pregunta}
                                             onChange={(e) => {
                                               const nuevas = [...(bloque.datos.preguntas || [])];
                                               nuevas[i] = { ...nuevas[i], pregunta: e.target.value };
@@ -916,8 +937,8 @@ export default function DisenarFicha() {
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium"
                                             placeholder="Pregunta"
                                           />
-                                          <textarea 
-                                            value={pq.respuesta} 
+                                          <textarea
+                                            value={pq.respuesta}
                                             onChange={(e) => {
                                               const nuevas = [...(bloque.datos.preguntas || [])];
                                               nuevas[i] = { ...nuevas[i], respuesta: e.target.value };
@@ -927,7 +948,7 @@ export default function DisenarFicha() {
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
                                             placeholder="Respuesta"
                                           />
-                                          <button 
+                                          <button
                                             onClick={() => {
                                               const nuevas = (bloque.datos.preguntas || []).filter((_, idx) => idx !== i);
                                               actualizarBloque(bloque.id, { preguntas: nuevas });
@@ -938,7 +959,7 @@ export default function DisenarFicha() {
                                           </button>
                                         </div>
                                       ))}
-                                      <button 
+                                      <button
                                         onClick={() => {
                                           const nuevas = [...(bloque.datos.preguntas || []), { pregunta: '', respuesta: '' }];
                                           actualizarBloque(bloque.id, { preguntas: nuevas });
@@ -967,7 +988,7 @@ export default function DisenarFicha() {
                                         {(bloque.datos.imagenes || []).map((img, i) => (
                                           <div key={i} className="relative aspect-square bg-gray-200 rounded-lg overflow-hidden">
                                             <img src={img} alt="" className="w-full h-full object-cover" />
-                                            <button 
+                                            <button
                                               onClick={() => {
                                                 const nuevas = (bloque.datos.imagenes || []).filter((_, idx) => idx !== i);
                                                 actualizarBloque(bloque.id, { imagenes: nuevas });
@@ -986,8 +1007,8 @@ export default function DisenarFicha() {
                                     <div className="space-y-4">
                                       <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Texto del banner</label>
-                                        <Editor 
-                                          content={bloque.datos.contenido || ''} 
+                                        <Editor
+                                          content={bloque.datos.contenido || ''}
                                           onChange={(html) => actualizarBloque(bloque.id, { contenido: html })}
                                           placeholder="Texto del banner..."
                                         />
@@ -996,15 +1017,15 @@ export default function DisenarFicha() {
                                         <div>
                                           <label className="block text-sm font-semibold text-gray-700 mb-2">Color de fondo</label>
                                           <div className="flex items-center gap-2">
-                                            <input 
-                                              type="color" 
-                                              value={bloque.datos.colorFondo || '#1e3a8a'} 
+                                            <input
+                                              type="color"
+                                              value={bloque.datos.colorFondo || '#1e3a8a'}
                                               onChange={(e) => actualizarBloque(bloque.id, { colorFondo: e.target.value })}
                                               className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
                                             />
-                                            <input 
-                                              type="text" 
-                                              value={bloque.datos.colorFondo || '#1e3a8a'} 
+                                            <input
+                                              type="text"
+                                              value={bloque.datos.colorFondo || '#1e3a8a'}
                                               onChange={(e) => actualizarBloque(bloque.id, { colorFondo: e.target.value })}
                                               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
                                             />
@@ -1013,15 +1034,15 @@ export default function DisenarFicha() {
                                         <div>
                                           <label className="block text-sm font-semibold text-gray-700 mb-2">Color de texto</label>
                                           <div className="flex items-center gap-2">
-                                            <input 
-                                              type="color" 
-                                              value={bloque.datos.colorTexto || '#ffffff'} 
+                                            <input
+                                              type="color"
+                                              value={bloque.datos.colorTexto || '#ffffff'}
                                               onChange={(e) => actualizarBloque(bloque.id, { colorTexto: e.target.value })}
                                               className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
                                             />
-                                            <input 
-                                              type="text" 
-                                              value={bloque.datos.colorTexto || '#ffffff'} 
+                                            <input
+                                              type="text"
+                                              value={bloque.datos.colorTexto || '#ffffff'}
                                               onChange={(e) => actualizarBloque(bloque.id, { colorTexto: e.target.value })}
                                               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
                                             />
@@ -1031,9 +1052,9 @@ export default function DisenarFicha() {
                                       <div className="grid grid-cols-2 gap-4">
                                         <div>
                                           <label className="block text-sm font-semibold text-gray-700 mb-2">Texto del botón (CTA)</label>
-                                          <input 
-                                            type="text" 
-                                            value={bloque.datos.ctaText || ''} 
+                                          <input
+                                            type="text"
+                                            value={bloque.datos.ctaText || ''}
                                             onChange={(e) => actualizarBloque(bloque.id, { ctaText: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                             placeholder="Ej: Ver promoción"
@@ -1041,9 +1062,9 @@ export default function DisenarFicha() {
                                         </div>
                                         <div>
                                           <label className="block text-sm font-semibold text-gray-700 mb-2">Link del botón</label>
-                                          <input 
-                                            type="url" 
-                                            value={bloque.datos.ctaLink || ''} 
+                                          <input
+                                            type="url"
+                                            value={bloque.datos.ctaLink || ''}
                                             onChange={(e) => actualizarBloque(bloque.id, { ctaLink: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                             placeholder="https://..."
@@ -1052,7 +1073,7 @@ export default function DisenarFicha() {
                                       </div>
                                       <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">Vista previa</label>
-                                        <div 
+                                        <div
                                           className="rounded-lg p-6 text-center"
                                           style={{ backgroundColor: bloque.datos.colorFondo || '#1e3a8a', color: bloque.datos.colorTexto || '#ffffff' }}
                                         >
@@ -1089,7 +1110,7 @@ export default function DisenarFicha() {
                                     <p className="text-xs text-gray-600">{bloque.datos.imagenes?.length || 0} imágenes</p>
                                   )}
                                   {bloque.tipo === 'banner' && (
-                                    <div 
+                                    <div
                                       className="px-3 py-2 rounded text-xs font-medium"
                                       style={{ backgroundColor: bloque.datos.colorFondo, color: bloque.datos.colorTexto }}
                                     >
@@ -1232,14 +1253,14 @@ export default function DisenarFicha() {
                           updateField("fotos", nuevas);
                         }}
                         label="Agregar foto a la galería"
-                        recomendacion={`Máximo ${planConfig.limites.maxFotos} fotos · JPG, PNG · Máx 5MB`}
+                        recomendacion={`Máximo ${planConfig.limites.maxFotos} fotos • JPG, PNG • Máx 5MB`}
                       />
 
                       <div className="space-y-3">
                         {optica.fotos?.map((foto, i) => {
                           const fotoUrl = getFotoUrl(foto);
                           const fotoCaption = getFotoCaption(foto);
-                          
+
                           return (
                             <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                               <GripVertical className="w-5 h-5 text-gray-400 cursor-move" />
@@ -1253,24 +1274,24 @@ export default function DisenarFicha() {
                                 )}
                               </div>
                               <div className="flex-1">
-                                <input 
-                                  type="text" 
-                                  value={fotoCaption} 
-                                  onChange={(e) => { 
+                                <input
+                                  type="text"
+                                  value={fotoCaption}
+                                  onChange={(e) => {
                                     const nuevas = [...(optica.fotos || [])];
                                     if (typeof nuevas[i] === 'string') {
                                       nuevas[i] = { url: nuevas[i], caption: e.target.value, publicId: '' };
                                     } else {
                                       nuevas[i] = { ...nuevas[i], caption: e.target.value };
                                     }
-                                    updateField("fotos", nuevas); 
-                                  }} 
-                                  placeholder="Agregar descripción..." 
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" 
+                                    updateField("fotos", nuevas);
+                                  }}
+                                  placeholder="Agregar descripción..."
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                 />
                               </div>
-                              <button 
-                                onClick={() => eliminarFotoGaleria(i)} 
+                              <button
+                                onClick={() => eliminarFotoGaleria(i)}
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                                 title="Eliminar foto"
                               >
@@ -1291,110 +1312,106 @@ export default function DisenarFicha() {
                 </div>
               )}
 
-{/* SECCIÓN: VIDEO */}
-{seccionActiva === "video" && (
-  <div className="space-y-6">
-    <div>
-      <h2 className="text-2xl font-bold text-navy-900 mb-2 flex items-center gap-2">
-        <Video className="w-6 h-6" />
-        Videos promocionales
-      </h2>
-      <p className="text-sm text-gray-600">
-        Agrega hasta 3 videos para mostrar tu óptica. YouTube, Vimeo o subida directa.
-      </p>
-    </div>
-
-    {planConfig.puedeEditar.videos ? (
-      <div className="space-y-6">
-        {/* Opción 1: URL de YouTube/Vimeo */}
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h3 className="font-semibold text-navy-900 mb-3 flex items-center gap-2">
-            <span className="text-sm">🔗</span>
-            Video de YouTube o Vimeo
-          </h3>
-          <input 
-            type="url" 
-            value={optica.videos?.[0] || ""} 
-            onChange={(e) => updateField("videos", [e.target.value])} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm" 
-            placeholder="https://youtube.com/watch?v=..." 
-          />
-          <p className="text-xs text-gray-500 mt-2">
-            Pega la URL completa del video de YouTube o Vimeo
-          </p>
-          {optica.videos?.[0] && getVideoEmbedUrl(optica.videos[0]) && (
-            <div className="mt-3 aspect-video rounded-lg overflow-hidden bg-black">
-              <iframe 
-                src={getVideoEmbedUrl(optica.videos[0])!} 
-                className="w-full h-full" 
-                allowFullScreen 
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Opción 2: Subida directa a Cloudinary */}
-        <div className="p-4 bg-gold-50 rounded-lg border border-gold-200">
-          <h3 className="font-semibold text-navy-900 mb-3 flex items-center gap-2">
-            <span className="text-sm">☁️</span>
-            Subir video directamente
-            <span className="text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full ml-2">Premium+</span>
-          </h3>
-          <p className="text-xs text-gray-600 mb-3">
-            Sube tu video directamente a nuestra plataforma. Máximo 100MB.
-          </p>
-<UploadVideo
-  value={optica.videoCloudinary}
-  onChange={(data) => {
-    // Guardamos el objeto completo con url y publicId
-    updateField("videoCloudinary", {
-      url: data.url,
-      publicId: data.publicId
-    });
-  }}
-  onRemove={async (publicId) => {
-    await deleteImageFromCloudinary(publicId);
-  }}
-  label="Subir video promocional"
-/>
-        </div>
-
-        {/* Preview de videos */}
-        {(optica.videos?.[0] || optica.videoCloudinary) && (
-          <div className="p-4 bg-navy-50 rounded-lg border border-navy-200">
-            <h3 className="font-semibold text-navy-900 mb-3">Vista previa de videos</h3>
-            <div className="space-y-3">
-              {optica.videos?.[0] && getVideoEmbedUrl(optica.videos[0]) && (
-                <div>
-                  <p className="text-xs text-gray-600 mb-1">YouTube/Vimeo:</p>
-                  <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                    <iframe 
-                      src={getVideoEmbedUrl(optica.videos[0])!} 
-                      className="w-full h-full" 
-                      allowFullScreen 
-                    />
+              {/* SECCIÓN: VIDEO */}
+              {seccionActiva === "video" && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-navy-900 mb-2 flex items-center gap-2">
+                      <Video className="w-6 h-6" />
+                      Videos promocionales
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      Agrega hasta 3 videos para mostrar tu óptica. YouTube, Vimeo o subida directa.
+                    </p>
                   </div>
+
+                  {planConfig.puedeEditar.videos ? (
+                    <div className="space-y-6">
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <h3 className="font-semibold text-navy-900 mb-3 flex items-center gap-2">
+                          <span className="text-sm">🔗</span>
+                          Video de YouTube o Vimeo
+                        </h3>
+                        <input
+                          type="url"
+                          value={optica.videos?.[0] || ""}
+                          onChange={(e) => updateField("videos", [e.target.value])}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="https://youtube.com/watch?v=..."
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          Pega la URL completa del video de YouTube o Vimeo
+                        </p>
+                        {optica.videos?.[0] && getVideoEmbedUrl(optica.videos[0]) && (
+                          <div className="mt-3 aspect-video rounded-lg overflow-hidden bg-black">
+                            <iframe
+                              src={getVideoEmbedUrl(optica.videos[0])!}
+                              className="w-full h-full"
+                              allowFullScreen
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-4 bg-gold-50 rounded-lg border border-gold-200">
+                        <h3 className="font-semibold text-navy-900 mb-3 flex items-center gap-2">
+                          <span className="text-sm">☁️</span>
+                          Subir video directamente
+                          <span className="text-xs bg-gold-500 text-white px-2 py-0.5 rounded-full ml-2">Premium+</span>
+                        </h3>
+                        <p className="text-xs text-gray-600 mb-3">
+                          Sube tu video directamente a nuestra plataforma. Máximo 100MB.
+                        </p>
+                        <UploadVideo
+                          value={optica.videoCloudinary}
+                          onChange={(data) => {
+                            updateField("videoCloudinary", {
+                              url: data.url,
+                              publicId: data.publicId
+                            });
+                          }}
+                          onRemove={async (publicId) => {
+                            await deleteImageFromCloudinary(publicId);
+                          }}
+                          label="Subir video promocional"
+                        />
+                      </div>
+
+                      {(optica.videos?.[0] || optica.videoCloudinary) && (
+                        <div className="p-4 bg-navy-50 rounded-lg border border-navy-200">
+                          <h3 className="font-semibold text-navy-900 mb-3">Vista previa de videos</h3>
+                          <div className="space-y-3">
+                            {optica.videos?.[0] && getVideoEmbedUrl(optica.videos[0]) && (
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">YouTube/Vimeo:</p>
+                                <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                                  <iframe
+                                    src={getVideoEmbedUrl(optica.videos[0])!}
+                                    className="w-full h-full"
+                                    allowFullScreen
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {optica.videoCloudinary && (
+                              <div>
+                                <p className="text-xs text-gray-600 mb-1">Video subido:</p>
+                                <video
+                                  src={optica.videoCloudinary.url}
+                                  controls
+                                  className="w-full rounded-lg bg-black"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <LockedField feature="Videos promocionales" requiredPlan="Premium+" opticaId={optica.id} />
+                  )}
                 </div>
               )}
-{optica.videoCloudinary && (
-  <div>
-    <p className="text-xs text-gray-600 mb-1">Video subido:</p>
-    <video 
-      src={optica.videoCloudinary.url} 
-      controls 
-      className="w-full rounded-lg bg-black"
-    />
-  </div>
-)}
-            </div>
-          </div>
-        )}
-      </div>
-    ) : (
-      <LockedField feature="Videos promocionales" requiredPlan="Premium+" opticaId={optica.id} />
-    )}
-  </div>
-)}
 
               {/* SECCIÓN: PRODUCTOS */}
               {seccionActiva === "productos" && (
@@ -1525,24 +1542,38 @@ export default function DisenarFicha() {
                 </div>
               )}
 
-              {/* SECCIÓN: ESPECIALIDADES */}
+              {/* ✅ SECCIÓN: ESPECIALIDADES (ACTUALIZADA) */}
               {seccionActiva === "especialidades" && (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   <div>
                     <h2 className="text-2xl font-bold text-navy-900 mb-2 flex items-center gap-2">
                       <Star className="w-6 h-6" />
                       Especialidades y seguros
                     </h2>
-                    <p className="text-sm text-gray-600">Qué servicios ofreces</p>
+                    <p className="text-sm text-gray-600">Define los servicios que ofreces para aparecer en búsquedas específicas.</p>
                   </div>
 
+                  {/* 1. ESPECIALIDADES GENÉRICAS */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Especialidades</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {ESPECIALIDADES_DISPONIBLES.map(esp => {
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                      Especialidades Generales
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-3">Disponibles para todos los planes. Aparecen en el directorio principal.</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {ESPECIALIDADES_GENERICAS.map(esp => {
                         const seleccionada = optica.especialidades?.includes(esp);
                         return (
-                          <button key={esp} onClick={() => { const nuevas = seleccionada ? (optica.especialidades?.filter(e => e !== esp) || []) : [...(optica.especialidades || []), esp]; updateField("especialidades", nuevas); }} className={`p-3 rounded-lg border text-left text-sm transition-all ${seleccionada ? "bg-navy-50 border-navy-500 text-navy-900 font-medium" : "bg-white border-gray-200 hover:border-navy-300"}`}>
+                          <button 
+                            key={esp} 
+                            onClick={() => { 
+                              const nuevas = seleccionada 
+                                ? (optica.especialidades?.filter(e => e !== esp) || []) 
+                                : [...(optica.especialidades || []), esp]; 
+                              updateField("especialidades", nuevas); 
+                            }} 
+                            className={`p-3 rounded-lg border text-left text-sm transition-all ${seleccionada ? "bg-navy-50 border-navy-500 text-navy-900 font-medium" : "bg-white border-gray-200 hover:border-navy-300"}`}
+                          >
                             {esp}
                           </button>
                         );
@@ -1550,13 +1581,95 @@ export default function DisenarFicha() {
                     </div>
                   </div>
 
+                  {/* 2. ESPECIALIDADES PERSONALIZADAS */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Seguros aceptados</h3>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-gold-500 rounded-full"></span>
+                        Especialidades Personalizadas
+                      </h3>
+                      {optica.plan !== 'free' && (
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          currentPersonalizadas.length >= maxPersonalizadas ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                        }`}>
+                          {currentPersonalizadas.length} de {maxPersonalizadas === 999 ? '∞' : maxPersonalizadas} utilizadas
+                        </span>
+                      )}
+                    </div>
+                    
+                    {optica.plan === 'free' ? (
+                      <LockedField feature="Especialidades personalizadas" requiredPlan="Premium" opticaId={optica.id} />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={nuevaEspecialidad}
+                            onChange={(e) => setNuevaEspecialidad(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && agregarEspecialidadPersonalizada()}
+                            placeholder="Ej: Ortoqueratología, Lentes para deporte..."
+                            disabled={!puedeAgregarPersonalizada}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gold-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          />
+                          <button
+                            onClick={agregarEspecialidadPersonalizada}
+                            disabled={!puedeAgregarPersonalizada || !nuevaEspecialidad.trim()}
+                            className="px-4 py-2 bg-navy-900 text-white text-sm font-semibold rounded-lg hover:bg-navy-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Agregar
+                          </button>
+                        </div>
+
+                        {currentPersonalizadas.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {currentPersonalizadas.map((esp, idx) => (
+                              <div key={idx} className="flex items-center gap-2 bg-gold-50 border border-gold-200 text-gold-900 px-3 py-1.5 rounded-full text-sm">
+                                <span>{esp}</span>
+                                <button
+                                  onClick={() => eliminarEspecialidadPersonalizada(esp)}
+                                  className="text-gold-700 hover:text-red-600 hover:bg-red-50 rounded-full p-0.5 transition-colors"
+                                  title="Eliminar especialidad"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">No has agregado especialidades personalizadas aún.</p>
+                        )}
+                        
+                        {optica.plan === 'premium' && currentPersonalizadas.length >= 5 && (
+                          <p className="text-xs text-amber-600 flex items-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Has alcanzado el límite de 5 especialidades para el plan Premium. Mejora a Premium+ para ilimitadas.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. SEGUROS ACEPTADOS */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Seguros aceptados
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {SEGUROS_DISPONIBLES.map(seguro => {
                         const seleccionada = optica.segurosAceptados?.includes(seguro);
                         return (
-                          <button key={seguro} onClick={() => { const nuevos = seleccionada ? (optica.segurosAceptados?.filter(s => s !== seguro) || []) : [...(optica.segurosAceptados || []), seguro]; updateField("segurosAceptados", nuevos); }} className={`p-3 rounded-lg border text-left text-sm transition-all ${seleccionada ? "bg-blue-50 border-blue-500 text-blue-900 font-medium" : "bg-white border-gray-200 hover:border-blue-300"}`}>
+                          <button 
+                            key={seguro} 
+                            onClick={() => { 
+                              const nuevos = seleccionada 
+                                ? (optica.segurosAceptados?.filter(s => s !== seguro) || []) 
+                                : [...(optica.segurosAceptados || []), seguro]; 
+                              updateField("segurosAceptados", nuevos); 
+                            }} 
+                            className={`p-3 rounded-lg border text-left text-sm transition-all ${seleccionada ? "bg-blue-50 border-blue-500 text-blue-900 font-medium" : "bg-white border-gray-200 hover:border-blue-300"}`}
+                          >
                             {seguro}
                           </button>
                         );
@@ -1578,15 +1691,15 @@ export default function DisenarFicha() {
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-[600px] overflow-y-auto">
                 {seccionActiva === "hero" && optica.hero && (
                   <div>
-                    <div 
+                    <div
                       className="aspect-video rounded-lg mb-3 flex items-center justify-center text-white font-bold"
                       style={{ backgroundColor: optica.hero.colorOverlay || "#000" }}
                     >
                       {optica.hero.imagen ? (
-                        <img 
-                          src={getHeroImagenUrl(optica.hero.imagen)} 
-                          alt="Hero" 
-                          className="w-full h-full object-cover rounded-lg" 
+                        <img
+                          src={getHeroImagenUrl(optica.hero.imagen)}
+                          alt="Hero"
+                          className="w-full h-full object-cover rounded-lg"
                         />
                       ) : (
                         <span className="text-sm">Vista previa del hero</span>
@@ -1616,7 +1729,7 @@ export default function DisenarFicha() {
                     <p className="font-bold text-navy-900">{optica.nombreComercial || "Nombre de tu óptica"}</p>
                     {optica.descripcion && <p className="text-sm text-gray-600">{optica.descripcion}</p>}
                     {optica.telefono && <p className="text-xs text-gray-600">📞 {optica.telefono}</p>}
-                    {optica.whatsapp && <p className="text-xs text-gray-600"> {optica.whatsapp}</p>}
+                    {optica.whatsapp && <p className="text-xs text-gray-600">💬 {optica.whatsapp}</p>}
                     {optica.sitioWeb && <p className="text-xs text-gray-600">🌐 {optica.sitioWeb}</p>}
                   </div>
                 )}
@@ -1626,13 +1739,12 @@ export default function DisenarFicha() {
                     <div className="grid grid-cols-2 gap-2">
                       {optica.fotos?.slice(0, 4).map((foto, i) => {
                         const fotoUrl = getFotoUrl(foto);
-                        
                         return (
                           <div key={i} className="aspect-square bg-gray-200 rounded overflow-hidden">
                             {fotoUrl ? (
-                              <img 
-                                src={fotoUrl} 
-                                alt={`Foto ${i + 1}`} 
+                              <img
+                                src={fotoUrl}
+                                alt={`Foto ${i + 1}`}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   (e.target as HTMLImageElement).style.display = 'none';
@@ -1685,6 +1797,9 @@ export default function DisenarFicha() {
                     <div className="flex flex-wrap gap-1">
                       {optica.especialidades?.slice(0, 5).map((e, i) => (
                         <span key={i} className="text-xs bg-navy-100 text-navy-700 px-2 py-1 rounded">{e}</span>
+                      ))}
+                      {optica.especialidadesPersonalizadas?.slice(0, 3).map((e, i) => (
+                        <span key={`p-${i}`} className="text-xs bg-gold-100 text-gold-800 px-2 py-1 rounded border border-gold-200">{e} ✨</span>
                       ))}
                     </div>
                   </div>
