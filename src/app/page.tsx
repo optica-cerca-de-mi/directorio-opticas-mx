@@ -20,6 +20,8 @@ import { AdSlot } from "@/components/OptiAdBoost";
 import FooterPublico from "@/components/FooterPublico";
 import GoogleLiveBadge from "@/components/GoogleLiveBadge";
 import GoogleMapsModal from "@/components/GoogleMapsModal";
+// ✅ IMPORTAR FUNCIONES COMPARTIDAS DE BÚSQUEDA
+import { normalizarTexto, filtrarPorEspecialidad, filtrarPorCiudad, filtrarPorSeguro, aplicarScoring } from '@/lib/search-utils';
 
 interface OpticaTop {
   id: string;
@@ -193,6 +195,7 @@ export default function HomePage() {
 
   const top3 = opticasRanking.slice(0, 3);
 
+  // ✅ FUNCIÓN FRANKLIN ACTUALIZADA CON FUNCIONES COMPARTIDAS
   const procesarConsultaFranklin = async () => {
     if (!franklinQuery.trim() || franklinState === "thinking") return;
 
@@ -235,127 +238,50 @@ export default function HomePage() {
         await addStreamingMessage(paso);
       }
 
+      // ✅ USAR FUNCIONES COMPARTIDAS CON LÓGICA ESTRICTA
       let resultadosFiltrados = [...opticas];
       let hayCoincidenciasExactas = true;
       let hayCoincidenciaEspecialidad = false;
-      let hayCoincidenciaCiudad = false;
 
-      // 1. FILTRADO POR CIUDAD
+      // 1. Filtrar por ciudad
       if (ciudad) {
-        const ciudadLower = ciudad.toLowerCase();
         const antes = resultadosFiltrados.length;
+        resultadosFiltrados = filtrarPorCiudad(resultadosFiltrados, ciudad);
         
-        resultadosFiltrados = resultadosFiltrados.filter((o) => {
-          const ciudadOptica = (o.ciudad || "").toLowerCase();
-          const estadoOptica = (o.estado || "").toLowerCase();
-          return ciudadOptica.includes(ciudadLower) || 
-                 estadoOptica.includes(ciudadLower) ||
-                 ciudadLower.includes(ciudadOptica);
-        });
-        
-        if (resultadosFiltrados.length > 0) {
-          hayCoincidenciaCiudad = true;
-        } else {
+        if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
           await addStreamingMessage(`No encontramos opticas en ${ciudad}.`);
-          resultadosFiltrados = [];
         }
       }
 
-      // 2. FILTRADO POR ESPECIALIDAD (ESTRICTO)
+      // 2. Filtrar por especialidad (ESTRICTO)
       if (especialidad) {
-        const espLower = especialidad.toLowerCase().trim();
-        const palabrasIgnorar = ["de", "la", "el", "los", "las", "un", "una", "y", "o"];
-        const palabrasClave = espLower.split(/\s+/).filter(p => p.length > 2 && !palabrasIgnorar.includes(p));
-        const terminosBusqueda = palabrasClave.length > 0 ? palabrasClave : [espLower];
-        
         const antes = resultadosFiltrados.length;
+        resultadosFiltrados = filtrarPorEspecialidad(resultadosFiltrados, especialidad);
         
-        resultadosFiltrados = resultadosFiltrados.filter((o) => {
-          const coincideGenerica = (o.especialidades || []).some((e: string) => {
-            const espNorm = e.toLowerCase();
-            return terminosBusqueda.some(t => espNorm.includes(t));
-          });
-          const coincidePersonalizada = (o.especialidadesPersonalizadas || []).some((e: string) => {
-            const espNorm = e.toLowerCase();
-            return terminosBusqueda.some(t => espNorm.includes(t));
-          });
-          if (coincideGenerica || coincidePersonalizada) {
-            hayCoincidenciaEspecialidad = true;
-            return true;
-          }
-          return false;
-        });
-
-        if (resultadosFiltrados.length === 0 && antes > 0) {
+        if (resultadosFiltrados.length > 0) {
+          hayCoincidenciaEspecialidad = true;
+        } else if (antes > 0) {
           hayCoincidenciasExactas = false;
           await addStreamingMessage(`No encontramos opticas con "${especialidad}".`);
         }
       }
 
-      // 3. FILTRADO POR SEGURO
+      // 3. Filtrar por seguro
       if (seguro) {
-        const seguroLower = seguro.toLowerCase();
         const antes = resultadosFiltrados.length;
-        resultadosFiltrados = resultadosFiltrados.filter((o) =>
-          (o.segurosAceptados || []).some((s: string) => s.toLowerCase().includes(seguroLower))
-        );
+        resultadosFiltrados = filtrarPorSeguro(resultadosFiltrados, seguro);
+        
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
           await addStreamingMessage(`No encontramos opticas que acepten ${seguro}.`);
         }
       }
 
-      // 4. ORDENAMIENTO INTELIGENTE (SCORING)
-      if (especialidad || ciudad) {
-        resultadosFiltrados.sort((a, b) => {
-          let scoreA = 0;
-          let scoreB = 0;
+      // 4. Aplicar scoring (ordenamiento inteligente)
+      resultadosFiltrados = aplicarScoring(resultadosFiltrados, especialidad, ciudad);
 
-          if (a.plan === 'premium_plus') scoreA += 30;
-          else if (a.plan === 'premium') scoreA += 20;
-          if (b.plan === 'premium_plus') scoreB += 30;
-          else if (b.plan === 'premium') scoreB += 20;
-
-          if (especialidad) {
-            const espLower = especialidad.toLowerCase();
-            const palabrasIgnorar = ["de", "la", "el", "los", "las", "un", "una", "y", "o"];
-            const terminosBusqueda = espLower.split(/\s+/).filter(p => p.length > 2 && !palabrasIgnorar.includes(p));
-            const terminos = terminosBusqueda.length > 0 ? terminosBusqueda : [espLower];
-
-            const aTienePersonalizada = (a.especialidadesPersonalizadas || []).some((e: string) => {
-              const espNorm = e.toLowerCase();
-              return terminos.some(t => espNorm.includes(t));
-            });
-            const bTienePersonalizada = (b.especialidadesPersonalizadas || []).some((e: string) => {
-              const espNorm = e.toLowerCase();
-              return terminos.some(t => espNorm.includes(t));
-            });
-            
-            if (aTienePersonalizada) scoreA += 50;
-            if (bTienePersonalizada) scoreB += 50;
-
-            const aTieneGenerica = (a.especialidades || []).some((e: string) => {
-              const espNorm = e.toLowerCase();
-              return terminos.some(t => espNorm.includes(t));
-            });
-            const bTieneGenerica = (b.especialidades || []).some((e: string) => {
-              const espNorm = e.toLowerCase();
-              return terminos.some(t => espNorm.includes(t));
-            });
-
-            if (aTieneGenerica && !aTienePersonalizada) scoreA += 20;
-            if (bTieneGenerica && !bTienePersonalizada) scoreB += 20;
-          }
-
-          scoreA += (a.calificacionGoogle || 0) * 2;
-          scoreB += (b.calificacionGoogle || 0) * 2;
-
-          return scoreB - scoreA;
-        });
-      }
-
-      // 5. LOGICA ESTRICTA: Si hay coincidencias, mostrar SOLO esas
+      // 5. LÓGICA ESTRICTA: Si hay coincidencias, mostrar SOLO esas
       if (resultadosFiltrados.length === 0) {
         await addStreamingMessage("No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles.");
         resultadosFiltrados = opticasRanking.slice(0, 3);
@@ -475,21 +401,17 @@ export default function HomePage() {
       <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden pt-20 pb-20 md:pt-28 md:pb-28">
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           
-          {/* Titulo principal - Directo y grande */}
           <h1 className="text-4xl md:text-6xl font-bold font-display mb-4 leading-tight">
             Encuentra la atencion que necesitas
           </h1>
 
-          {/* Subtitulo descriptivo */}
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
             Describe que te pasa o a quien buscas, y te ayudaremos a encontrar la optica perfecta.
           </p>
 
-          {/* Buscador Franklin - Estilo Doctoralia */}
           <div className="w-full max-w-3xl mx-auto">
             <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-5">
               
-              {/* Header de Franklin */}
               <div className="flex items-center gap-3 pb-3 mb-3 border-b border-gray-100">
                 <div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
@@ -508,7 +430,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Input + Boton en una sola fila */}
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="flex-1 relative">
                   <input
@@ -539,7 +460,6 @@ export default function HomePage() {
                 </button>
               </div>
 
-              {/* Sugerencias rapidas */}
               <div className="pt-3 mt-3 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">
                   {SUGERENCIAS_RAPIDAS.map((sug, i) => (
@@ -557,7 +477,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Contadores */}
           <div className="grid grid-cols-3 gap-4 md:gap-8 mt-12 max-w-2xl mx-auto">
             <div className="text-center">
               <AnimatedCounter end={stats.totalOpticas} />
