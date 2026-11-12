@@ -1,14 +1,12 @@
-	"use client";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   Star, MapPin, ShieldCheck, Crown, Sparkles,
-  Search, Eye, MessageCircle,
-  ChevronRight, Award, Users,
-  CheckCircle2, ArrowRight, Zap, Target,
-  Building2, Store, Glasses, ScanEye, Baby,
-  Contact, EyeOff, Loader2, X, Sun
+  ChevronRight, Award, ArrowRight, Zap, Target,
+  Building2, Store, Glasses, ScanEye,
+  Contact, EyeOff, Sun
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -20,9 +18,11 @@ import { AdSlot } from "@/components/OptiAdBoost";
 import FooterPublico from "@/components/FooterPublico";
 import GoogleLiveBadge from "@/components/GoogleLiveBadge";
 import GoogleMapsModal from "@/components/GoogleMapsModal";
-// ✅ IMPORTAR FUNCIONES COMPARTIDAS DE BÚSQUEDA
-import { normalizarTexto, filtrarPorEspecialidad, filtrarPorCiudad, filtrarPorSeguro, aplicarScoring } from '@/lib/search-utils';
+import { FranklinModule } from "@/components/Franklin";
 
+// ═══════════════════════════════════════════════════════════════
+// TIPOS
+// ═══════════════════════════════════════════════════════════════
 interface OpticaTop {
   id: string;
   nombre: string;
@@ -46,12 +46,9 @@ interface OpticaTop {
   urlGoogleMaps?: string;
 }
 
-interface FranklinMessage {
-  id: number;
-  text: string;
-  type: "thinking" | "success";
-}
-
+// ═══════════════════════════════════════════════════════════════
+// COMPONENTES AUXILIARES
+// ═══════════════════════════════════════════════════════════════
 function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; duration?: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
@@ -117,8 +114,11 @@ function BannerPropio() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// DATOS MAESTROS
+// ═══════════════════════════════════════════════════════════════
 const ESPECIALIDADES = [
-  { nombre: "Optometria General", icono: Eye, slug: "optometria" },
+  { nombre: "Optometria General", icono: Star, slug: "optometria" },
   { nombre: "Lentes de Contacto", icono: Contact, slug: "contactologia" },
   { nombre: "Lentes Progresivos", icono: Glasses, slug: "progresivos" },
   { nombre: "Lentes Antiblue", icono: Sun, slug: "antiblue" },
@@ -133,17 +133,14 @@ const SUGERENCIAS_RAPIDAS = [
   "Lentes para computadora",
 ];
 
+// ═══════════════════════════════════════════════════════════════
+// COMPONENTE PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
 export default function HomePage() {
   const [opticas, setOpticas] = useState<OpticaTop[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ totalOpticas: 0, totalCiudades: 0, totalEspecialidades: 0 });
-  const [franklinQuery, setFranklinQuery] = useState("");
-  const [franklinState, setFranklinState] = useState<"idle" | "thinking" | "done">("idle");
-  const [franklinMessages, setFranklinMessages] = useState<FranklinMessage[]>([]);
-  const [franklinResults, setFranklinResults] = useState<OpticaTop[]>([]);
-  const [franklinSummary, setFranklinSummary] = useState("");
   const [mapsModal, setMapsModal] = useState<{ isOpen: boolean; optica: OpticaTop | null }>({ isOpen: false, optica: null });
-  const resultsRef = useRef<HTMLDivElement>(null);
   const { location, consent } = useUserLocation();
 
   useEffect(() => {
@@ -195,150 +192,6 @@ export default function HomePage() {
 
   const top3 = opticasRanking.slice(0, 3);
 
-  // ✅ FUNCIÓN FRANKLIN ACTUALIZADA CON FUNCIONES COMPARTIDAS
-  const procesarConsultaFranklin = async () => {
-    if (!franklinQuery.trim() || franklinState === "thinking") return;
-
-    setFranklinState("thinking");
-    setFranklinMessages([]);
-    setFranklinResults([]);
-    setFranklinSummary("");
-
-    setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
-
-    const addStreamingMessage = async (text: string) => {
-      const msgId = Date.now() + Math.random();
-      setFranklinMessages((prev) => [...prev, { id: msgId, text, type: "thinking" }]);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      setFranklinMessages((prev) =>
-        prev.map(m => m.id === msgId ? { ...m, type: "success" } : m)
-      );
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    };
-
-    try {
-      const response = await fetch('/api/franklin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: franklinQuery }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Error en la busqueda");
-      }
-
-      const aiData = result.data;
-      const { ciudad, especialidad, seguro } = aiData.filtros;
-
-      for (const paso of aiData.pasos_pensamiento) {
-        await addStreamingMessage(paso);
-      }
-
-      // ✅ USAR FUNCIONES COMPARTIDAS CON LÓGICA ESTRICTA
-      let resultadosFiltrados = [...opticas];
-      let hayCoincidenciasExactas = true;
-      let hayCoincidenciaEspecialidad = false;
-
-      // 1. Filtrar por ciudad
-      if (ciudad) {
-        const antes = resultadosFiltrados.length;
-        resultadosFiltrados = filtrarPorCiudad(resultadosFiltrados, ciudad);
-        
-        if (resultadosFiltrados.length === 0 && antes > 0) {
-          hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos opticas en ${ciudad}.`);
-        }
-      }
-
-// 2. Filtrar por especialidad (CON RESPALDO JERÁRQUICO)
-if (especialidad) {
-  const antes = resultadosFiltrados.length;
-  resultadosFiltrados = filtrarPorEspecialidad(resultadosFiltrados, especialidad);
-  
-  if (resultadosFiltrados.length > 0) {
-    hayCoincidenciaEspecialidad = true;
-  } else if (antes > 0) {
-    // ✅ RESPALDO: Si la IA no acertó, intentamos con los términos del diccionario
-    const terminosRespaldo = aiData.terminos_expandidos || [];
-    let encontrado = false;
-    
-    for (const termino of terminosRespaldo) {
-      if (termino === especialidad) continue; // No repetir el mismo
-      const intento = filtrarPorEspecialidad([...opticas], termino);
-      if (intento.length > 0) {
-        resultadosFiltrados = intento;
-        hayCoincidenciaEspecialidad = true;
-        encontrado = true;
-        await addStreamingMessage(`Ajustando búsqueda: buscando "${termino}" en lugar de "${especialidad}".`);
-        break;
-      }
-    }
-    
-    if (!encontrado) {
-      hayCoincidenciasExactas = false;
-      await addStreamingMessage(`No encontramos opticas con "${especialidad}".`);
-    }
-  }
-}
-
-      // 3. Filtrar por seguro
-      if (seguro) {
-        const antes = resultadosFiltrados.length;
-        resultadosFiltrados = filtrarPorSeguro(resultadosFiltrados, seguro);
-        
-        if (resultadosFiltrados.length === 0 && antes > 0) {
-          hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos opticas que acepten ${seguro}.`);
-        }
-      }
-
-      // 4. Aplicar scoring (ordenamiento inteligente)
-      resultadosFiltrados = aplicarScoring(resultadosFiltrados, especialidad, ciudad);
-
-      // 5. LÓGICA ESTRICTA: Si hay coincidencias, mostrar SOLO esas
-      if (resultadosFiltrados.length === 0) {
-        await addStreamingMessage("No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles.");
-        resultadosFiltrados = opticasRanking.slice(0, 3);
-      } else {
-        // Mostrar SOLO las coincidencias (max 6), NO rellenar con otras
-        resultadosFiltrados = resultadosFiltrados.slice(0, 6);
-      }
-
-      // Mensaje final inteligente
-      let resumenFinal = aiData.mensaje_final;
-      if (!hayCoincidenciasExactas) {
-        resumenFinal = `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || 'tu zona'}.`;
-      } else if (hayCoincidenciaEspecialidad) {
-        resumenFinal = `Encontre ${resultadosFiltrados.length} optica${resultadosFiltrados.length === 1 ? '' : 's'} con experiencia en ${especialidad}.`;
-      }
-
-      setFranklinResults(resultadosFiltrados);
-      setFranklinSummary(resumenFinal);
-      setFranklinState("done");
-
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 500);
-
-    } catch (error) {
-      console.error("Error en Franklin:", error);
-      await addStreamingMessage("Hubo un problema procesando tu busqueda. Por favor, intenta de nuevo.");
-      setFranklinState("done");
-    }
-  };
-
-  const resetFranklin = () => {
-    setFranklinState("idle");
-    setFranklinMessages([]);
-    setFranklinResults([]);
-    setFranklinSummary("");
-    setFranklinQuery("");
-  };
-
   const badgesHumanos = [
     {
       titulo: "La mas recomendada", subtitulo: "Elegida por nuestra comunidad",
@@ -381,17 +234,17 @@ if (especialidad) {
   ];
 
   const beneficios = [
-    { icono: Search, titulo: "Encuentra rapido", descripcion: "Busca opticas por ciudad, especialidad o seguro medico en segundos." },
+    { icono: Star, titulo: "Encuentra rapido", descripcion: "Busca opticas por ciudad, especialidad o seguro medico en segundos." },
     { icono: Star, titulo: "Resenas reales", descripcion: "Opiniones verificadas de pacientes reales para tomar la mejor decision." },
     { icono: MapPin, titulo: "Cerca de ti", descripcion: "Geolocalizacion inteligente para encontrar las opticas mas cercanas." },
     { icono: ShieldCheck, titulo: "Opticas verificadas", descripcion: "Todas las opticas premium estan verificadas y actualizadas." },
     { icono: ChevronRight, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una optica esta abierta ahora mismo." },
-    { icono: MessageCircle, titulo: "Contacto directo", descripcion: "WhatsApp, llamada o Waze con un solo clic." },
+    { icono: Star, titulo: "Contacto directo", descripcion: "WhatsApp, llamada o Waze con un solo clic." },
   ];
 
   const razonesRecomendacion = [
     { icono: Target, titulo: "Ranking inteligente", descripcion: "Nuestro algoritmo OptiRank analiza calificacion, ubicacion, horarios y completitud de ficha para recomendarte las mejores opciones." },
-    { icono: Users, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificacion o exploracion, y ajustamos el orden segun lo que mas te importa." },
+    { icono: Target, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificacion o exploracion, y ajustamos el orden segun lo que mas te importa." },
     { icono: Star, titulo: "Transparencia total", descripcion: "Mostramos resenas reales de Google, horarios actualizados y toda la informacion que necesitas sin sorpresas." },
   ];
 
@@ -415,86 +268,26 @@ if (especialidad) {
         urlGoogleMaps={mapsModal.optica?.urlGoogleMaps || ""}
       />
 
-      {/* HERO INSPIRADO EN DOCTORALIA */}
+      {/* ═══════════════════════════════════════════════════════════
+          HERO INSPIRADO EN DOCTORALIA
+      ═══════════════════════════════════════════════════════════ */}
       <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden pt-20 pb-20 md:pt-28 md:pb-28">
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          
           <h1 className="text-4xl md:text-6xl font-bold font-display mb-4 leading-tight">
             Encuentra la atencion que necesitas
           </h1>
-
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
             Describe que te pasa o a quien buscas, y te ayudaremos a encontrar la optica perfecta.
           </p>
 
-          <div className="w-full max-w-3xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-5">
-              
-              <div className="flex items-center gap-3 pb-3 mb-3 border-b border-gray-100">
-                <div className="relative w-10 h-10 flex items-center justify-center flex-shrink-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-40"></div>
-                  <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg">
-                    <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-bold text-navy-900 font-display">
-                    Franklin <span className="text-xs font-normal text-gray-500">AI</span>
-                  </p>
-                  <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                    Tecnologia impulsada por Qwen AI
-                  </p>
-                </div>
-              </div>
+          {/* ✅ MÓDULO FRANKLIN AISLADO */}
+          <FranklinModule
+            opticas={opticas}
+            opticasRanking={opticasRanking as unknown as OpticaTop[]}
+            sugerencias={SUGERENCIAS_RAPIDAS}
+          />
 
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={franklinQuery}
-                    onChange={(e) => setFranklinQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") procesarConsultaFranklin();
-                    }}
-                    placeholder="Describe tu problema o escribe una especialidad, seguro o ciudad..."
-                    className="w-full h-14 md:h-12 px-4 text-gray-800 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent text-base"
-                  />
-                </div>
-
-                <button
-                  onClick={procesarConsultaFranklin}
-                  disabled={franklinState === "thinking" || !franklinQuery.trim()}
-                  className="w-full md:w-auto h-14 md:h-12 px-6 bg-navy-900 hover:bg-navy-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-95"
-                >
-                  {franklinState === "thinking" ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Search className="w-5 h-5" />
-                      <span>Busqueda Inteligente</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="pt-3 mt-3 border-t border-gray-100">
-                <div className="flex flex-wrap gap-2">
-                  {SUGERENCIAS_RAPIDAS.map((sug, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setFranklinQuery(sug); procesarConsultaFranklin(); }}
-                      disabled={franklinState === "thinking"}
-                      className="text-xs bg-gray-100 hover:bg-navy-50 hover:border-navy-200 text-gray-700 px-3 py-2 rounded-full border border-gray-200 transition-colors disabled:opacity-50"
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
+          {/* Contadores */}
           <div className="grid grid-cols-3 gap-4 md:gap-8 mt-12 max-w-2xl mx-auto">
             <div className="text-center">
               <AnimatedCounter end={stats.totalOpticas} />
@@ -512,146 +305,9 @@ if (especialidad) {
         </div>
       </section>
 
-      {/* PANEL DE RESULTADOS DE FRANKLIN */}
-      {(franklinState === "thinking" || franklinState === "done") && (
-        <section ref={resultsRef} className="py-16 bg-gradient-to-br from-gold-50 to-white border-b border-gold-200">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-navy-900 to-navy-800 text-white px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-10 h-10 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-gradient-to-br from-gold-400 to-amber-500 rounded-full animate-ping opacity-30"></div>
-                    <div className="relative w-10 h-10 bg-gradient-to-br from-gold-400 via-amber-400 to-gold-600 rounded-full flex items-center justify-center shadow-lg shadow-gold-400/50 animate-pulse">
-                      <Sparkles className="w-5 h-5 text-white drop-shadow-md" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="font-bold font-display">Franklin</p>
-                    <p className="text-xs text-gray-300">Impulsado por Qwen AI</p>
-                  </div>
-                </div>
-                {franklinState === "done" && (
-                  <button
-                    onClick={resetFranklin}
-                    className="text-gray-300 hover:text-white transition-colors"
-                    title="Nueva busqueda"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
-
-              <div className="p-6 space-y-3 min-h-[120px]">
-                {franklinMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex items-start gap-3 transition-all duration-500 ${
-                      msg.type === "success"
-                        ? "bg-green-50 border border-green-200 rounded-lg p-3"
-                        : "py-1"
-                    }`}
-                    style={{ animation: "fadeIn 0.4s ease-out" }}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
-                        msg.type === "success"
-                          ? "bg-green-500 scale-100"
-                          : "bg-navy-100 scale-95"
-                      }`}
-                    >
-                      {msg.type === "thinking" ? (
-                        <Loader2 className="w-4 h-4 text-navy-700 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                    <p
-                      className={`text-sm transition-all duration-300 ${
-                        msg.type === "success"
-                          ? "text-green-900 font-semibold"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {msg.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {franklinState === "done" && franklinResults.length > 0 && (
-                <div className="border-t border-gray-200 p-6 bg-gray-50">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-navy-900 font-display">{franklinSummary}</h3>
-                    <Link
-                      href="/opticas"
-                      className="text-sm text-navy-700 hover:text-navy-900 font-semibold flex items-center gap-1"
-                    >
-                      Ver todas <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {franklinResults.map((optica) => {
-                      const { abierta } = estaAbiertaEn(optica.horarios || []);
-                      const imagen = optica.fotos?.[0]?.url;
-                      return (
-                        <Link
-                          key={optica.id}
-                          href={`/opticas/${optica.slug || optica.id}`}
-                          className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all"
-                        >
-                          <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
-                            {imagen ? (
-                              <img src={imagen} alt={optica.nombre} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-navy-100 to-navy-200">
-                                <MapPin className="w-10 h-10 text-navy-400" />
-                              </div>
-                            )}
-                            {(optica.plan === "premium_plus" || optica.plan === "premium") && (
-                              <div className="absolute top-2 right-2">
-                                <span className={`px-2 py-0.5 text-white text-[9px] font-bold rounded-full ${optica.plan === "premium_plus" ? "bg-amber-500" : "bg-navy-900"}`}>
-                                  {optica.plan === "premium_plus" ? "PREMIUM+" : "PREMIUM"}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-4">
-                            <h4 className="font-bold text-navy-900 text-sm mb-1 line-clamp-1">{optica.nombre}</h4>
-                            <p className="text-xs text-gray-600 mb-2 flex items-center gap-1">
-                              <MapPin className="w-3 h-3" /> {optica.ciudad}{optica.estado ? `, ${optica.estado}` : ""}
-                            </p>
-                            {optica.calificacionGoogle && (
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
-                                <span className="text-xs font-bold text-navy-900">{optica.calificacionGoogle}</span>
-                                <span className="text-xs text-gray-500">({optica.numResenas})</span>
-                              </div>
-                            )}
-                            <div className="mt-2">
-                              {abierta ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-semibold rounded-full">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Abierta
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-semibold rounded-full">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Cerrada
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* GRID DE ESPECIALIDADES */}
+      {/* ═══════════════════════════════════════════════════════════
+          GRID DE ESPECIALIDADES
+      ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -685,7 +341,9 @@ if (especialidad) {
         </div>
       </section>
 
-      {/* TOP 3 OPTICAS */}
+      {/* ═══════════════════════════════════════════════════════════
+          TOP 3 RECOMENDADAS
+      ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -809,7 +467,9 @@ if (especialidad) {
 
       <AdSlot slotId="home-between-1" />
 
-      {/* BENEFICIOS */}
+      {/* ═══════════════════════════════════════════════════════════
+          BENEFICIOS
+      ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -834,7 +494,9 @@ if (especialidad) {
         </div>
       </section>
 
-      {/* POR QUE LAS RECOMENDAMOS */}
+      {/* ═══════════════════════════════════════════════════════════
+          POR QUE LAS RECOMENDAMOS
+      ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -865,7 +527,9 @@ if (especialidad) {
         </div>
       </section>
 
-      {/* PLANES */}
+      {/* ═══════════════════════════════════════════════════════════
+          PLANES
+      ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-gold-50 via-white to-amber-50 border-y border-gold-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -926,7 +590,9 @@ if (especialidad) {
 
       <BannerPropio />
 
-      {/* CTA FINAL */}
+      {/* ═══════════════════════════════════════════════════════════
+          CTA FINAL
+      ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Tienes una optica?</h2>
