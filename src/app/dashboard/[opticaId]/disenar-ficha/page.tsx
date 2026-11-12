@@ -16,6 +16,7 @@ import { getPlanConfig, PlanType } from "@/lib/plans-config";
 import Editor from "@/components/Editor";
 import { deleteImageFromCloudinary } from "@/lib/cloudinary";
 import UploadVideo from "@/components/UploadVideo";
+import OptiRelevanceCard from "@/components/dashboard/OptiRelevanceCard";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // TIPOS
@@ -701,6 +702,9 @@ export default function DisenarFicha() {
           {/* Área de edición */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border border-gray-200 p-6">
+
+               {/* ✅ Tarjeta de Relevancia en Tiempo Real */}
+               <OptiRelevanceCard optica={optica} />
 
               {/* SECCIÓN: HERO */}
               {seccionActiva === "hero" && (
