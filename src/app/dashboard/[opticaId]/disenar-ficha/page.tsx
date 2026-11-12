@@ -202,6 +202,7 @@ function UploadImagen({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [needsGeocoding, setNeedsGeocoding] = useState(false);
 
   const handleFile = async (file: File) => {
     if (file.size > 5 * 1024 * 1024) {
@@ -455,13 +456,11 @@ export default function DisenarFicha() {
   useEffect(() => {
     if (!hasChanges || !optica) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
     setSaveStatus("saving");
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        const docRef = doc(db, "opticas", optica.id);
-        const { id, ...dataToSave } = optica;
-        const sanitizedData = sanitizeForFirebase(dataToSave);
-        await updateDoc(docRef, sanitizedData);
+        await ejecutarGuardado(optica);
         setSaveStatus("saved");
         setHasChanges(false);
         setTimeout(() => setSaveStatus("idle"), 2000);
@@ -470,15 +469,23 @@ export default function DisenarFicha() {
         setSaveStatus("error");
         setTimeout(() => setSaveStatus("idle"), 3000);
       }
-    }, 2000);
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
-  }, [optica, hasChanges]);
+    }, 2500); // 2.5s para dar tiempo al geocoding si es necesario
+
+    return () => { 
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); 
+    };
+  }, [optica, hasChanges, ejecutarGuardado]);
 
   const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
 
   const updateField = useCallback((field: keyof OpticaData, value: any) => {
     setOptica(prev => prev ? { ...prev, [field]: value } : null);
     setHasChanges(true);
+    
+    // ✅ Marcar para geocoding si cambia algún campo de ubicación
+    if (['direccion', 'ciudad', 'estado', 'cp'].includes(field)) {
+      setNeedsGeocoding(true);
+    }
   }, []);
 
   const eliminarFotoGaleria = useCallback(async (index: number) => {
@@ -493,12 +500,48 @@ export default function DisenarFicha() {
     updateField("fotos", nuevasFotos);
   }, [optica?.fotos, updateField]);
 
+  // ✅ FUNCIÓN UNIFICADA DE GUARDADO CON GEOCODING AUTOMÁTICO
+  const ejecutarGuardado = useCallback(async (datos: any) => {
+    let dataToSave = { ...datos };
+    const { id, ...rest } = dataToSave;
+
+    // 1. Geocoding si es necesario
+    if (needsGeocoding) {
+      try {
+        const response = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            direccion: rest.direccion,
+            ciudad: rest.ciudad,
+            estado: rest.estado,
+            cp: rest.cp
+          })
+        });
+        const geoData = await response.json();
+        
+        if (geoData.success && geoData.latitud && geoData.longitud) {
+          rest.latitud = geoData.latitud;
+          rest.longitud = geoData.longitud;
+          setNeedsGeocoding(false); // Ya geocodificamos, resetear flag
+        }
+      } catch (error) {
+        console.error("Error al geocodificar:", error);
+        // Continuamos con el guardado aunque falle el geocoding para no bloquear al usuario
+      }
+    }
+
+    // 2. Guardar en Firestore
+    const docRef = doc(db, "opticas", datos.id);
+    const sanitizedData = sanitizeForFirebase(rest);
+    await updateDoc(docRef, sanitizedData);
+  }, [needsGeocoding]);
+
   const guardarManual = async () => {
+    if (!optica) return;
     try {
-      const docRef = doc(db, "opticas", optica!.id);
-      const { id, ...dataToSave } = optica!;
-      const sanitizedData = sanitizeForFirebase(dataToSave);
-      await updateDoc(docRef, sanitizedData);
+      setSaveStatus("saving");
+      await ejecutarGuardado(optica);
       setSaveStatus("saved");
       setHasChanges(false);
       setTimeout(() => setSaveStatus("idle"), 2000);
