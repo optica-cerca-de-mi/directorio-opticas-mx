@@ -1,4 +1,4 @@
-"use client";
+	"use client";
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -254,18 +254,36 @@ export default function HomePage() {
         }
       }
 
-      // 2. Filtrar por especialidad (ESTRICTO)
-      if (especialidad) {
-        const antes = resultadosFiltrados.length;
-        resultadosFiltrados = filtrarPorEspecialidad(resultadosFiltrados, especialidad);
-        
-        if (resultadosFiltrados.length > 0) {
-          hayCoincidenciaEspecialidad = true;
-        } else if (antes > 0) {
-          hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos opticas con "${especialidad}".`);
-        }
+// 2. Filtrar por especialidad (CON RESPALDO JERÁRQUICO)
+if (especialidad) {
+  const antes = resultadosFiltrados.length;
+  resultadosFiltrados = filtrarPorEspecialidad(resultadosFiltrados, especialidad);
+  
+  if (resultadosFiltrados.length > 0) {
+    hayCoincidenciaEspecialidad = true;
+  } else if (antes > 0) {
+    // ✅ RESPALDO: Si la IA no acertó, intentamos con los términos del diccionario
+    const terminosRespaldo = aiData.terminos_expandidos || [];
+    let encontrado = false;
+    
+    for (const termino of terminosRespaldo) {
+      if (termino === especialidad) continue; // No repetir el mismo
+      const intento = filtrarPorEspecialidad([...opticas], termino);
+      if (intento.length > 0) {
+        resultadosFiltrados = intento;
+        hayCoincidenciaEspecialidad = true;
+        encontrado = true;
+        await addStreamingMessage(`Ajustando búsqueda: buscando "${termino}" en lugar de "${especialidad}".`);
+        break;
       }
+    }
+    
+    if (!encontrado) {
+      hayCoincidenciasExactas = false;
+      await addStreamingMessage(`No encontramos opticas con "${especialidad}".`);
+    }
+  }
+}
 
       // 3. Filtrar por seguro
       if (seguro) {
