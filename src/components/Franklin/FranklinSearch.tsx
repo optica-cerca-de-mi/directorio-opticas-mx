@@ -1,6 +1,7 @@
 "use client";
 
-import { Sparkles, Search, Loader2 } from "lucide-react";
+import { Sparkles, Search, Loader2, Filter, Clock, ShieldCheck, BadgeCheck } from "lucide-react";
+import type { ActiveFilters } from "./hooks/useFranklin";
 
 interface FranklinSearchProps {
   query: string;
@@ -8,6 +9,8 @@ interface FranklinSearchProps {
   onSearch: () => void;
   isThinking: boolean;
   sugerencias?: string[];
+  activeFilters: ActiveFilters;
+  setActiveFilters: (filters: ActiveFilters) => void;
 }
 
 const SUGERENCIAS_DEFAULT = [
@@ -23,7 +26,18 @@ export default function FranklinSearch({
   onSearch,
   isThinking,
   sugerencias = SUGERENCIAS_DEFAULT,
+  activeFilters,
+  setActiveFilters,
 }: FranklinSearchProps) {
+  const toggleFilter = (key: keyof ActiveFilters, value?: any) => {
+    setActiveFilters({
+      ...activeFilters,
+      [key]: activeFilters[key] ? undefined : (value ?? true),
+    });
+  };
+
+  const hayFiltrosActivos = Object.values(activeFilters).some((v) => v !== undefined);
+
   return (
     <div className="w-full max-w-3xl mx-auto">
       <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-5">
@@ -75,6 +89,71 @@ export default function FranklinSearch({
               </>
             )}
           </button>
+        </div>
+
+        {/* ✅ FILTROS MULTI-CRITERIO */}
+        <div className="pt-3 mt-3 border-t border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <Filter className="w-3 h-3 text-gray-500" />
+            <span className="text-xs font-semibold text-gray-600">Filtros rapidos:</span>
+            {hayFiltrosActivos && (
+              <button
+                onClick={() => setActiveFilters({})}
+                className="text-xs text-navy-700 hover:underline ml-auto"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => toggleFilter("abiertoAhora")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1 ${
+                activeFilters.abiertoAhora
+                  ? "bg-green-100 border-green-300 text-green-800 font-semibold"
+                  : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              Abierto ahora
+            </button>
+
+            <button
+              onClick={() => toggleFilter("soloVerificadas")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1 ${
+                activeFilters.soloVerificadas
+                  ? "bg-blue-100 border-blue-300 text-blue-800 font-semibold"
+                  : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <BadgeCheck className="w-3 h-3" />
+              Solo verificadas
+            </button>
+
+            <button
+              onClick={() => toggleFilter("seguroEspecifico", "GNP")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1 ${
+                activeFilters.seguroEspecifico === "GNP"
+                  ? "bg-amber-100 border-amber-300 text-amber-800 font-semibold"
+                  : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <ShieldCheck className="w-3 h-3" />
+              Acepta GNP
+            </button>
+
+            <button
+              onClick={() => toggleFilter("seguroEspecifico", "AXA")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1 ${
+                activeFilters.seguroEspecifico === "AXA"
+                  ? "bg-amber-100 border-amber-300 text-amber-800 font-semibold"
+                  : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <ShieldCheck className="w-3 h-3" />
+              Acepta AXA
+            </button>
+          </div>
         </div>
 
         {/* Sugerencias rápidas */}

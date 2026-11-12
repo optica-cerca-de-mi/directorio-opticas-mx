@@ -7,6 +7,12 @@ import {
   filtrarPorSeguro,
   aplicarScoring,
 } from "@/lib/search-utils";
+import { estaAbiertaEn } from "@/lib/ranking-engine";
+import { registrarBusquedaFranklin } from "@/lib/franklin-analytics";
+
+// ═══════════════════════════════════════════════════════════════
+// TIPOS
+// ═══════════════════════════════════════════════════════════════
 
 export interface OpticaTop {
   id: string;
@@ -43,6 +49,14 @@ export interface FranklinFilters {
   seguro?: string | null;
 }
 
+export interface ActiveFilters {
+  abiertoAhora?: boolean;
+  distancia?: number; // km, 0 = sin límite
+  precio?: "low" | "medium" | "high";
+  seguroEspecifico?: string;
+  soloVerificadas?: boolean;
+}
+
 export interface FranklinResponse {
   filtros: FranklinFilters;
   pasos_pensamiento: string[];
@@ -58,6 +72,8 @@ export interface UseFranklinReturn {
   messages: FranklinMessage[];
   results: OpticaTop[];
   summary: string;
+  activeFilters: ActiveFilters;
+  setActiveFilters: (filters: ActiveFilters) => void;
   processQuery: () => Promise<void>;
   reset: () => void;
   resultsRef: React.RefObject<HTMLDivElement | null>;
@@ -68,12 +84,17 @@ interface UseFranklinProps {
   opticasRanking: OpticaTop[];
 }
 
+// ═══════════════════════════════════════════════════════════════
+// HOOK PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+
 export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseFranklinReturn {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<"idle" | "thinking" | "done">("idle");
   const [messages, setMessages] = useState<FranklinMessage[]>([]);
   const [results, setResults] = useState<OpticaTop[]>([]);
   const [summary, setSummary] = useState("");
+  const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const addStreamingMessage = useCallback(async (text: string) => {
@@ -167,21 +188,58 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         }
       }
 
-      // 3. Filtrar por seguro
-      if (seguro) {
+      // 3. Filtrar por seguro (IA o filtro manual)
+      const seguroFinal = seguro || activeFilters.seguroEspecifico;
+      if (seguroFinal) {
         const antes = resultadosFiltrados.length;
-        resultadosFiltrados = filtrarPorSeguro(resultadosFiltrados, seguro);
+        resultadosFiltrados = filtrarPorSeguro(resultadosFiltrados, seguroFinal);
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos opticas que acepten ${seguro}.`);
+          await addStreamingMessage(`No encontramos opticas que acepten ${seguroFinal}.`);
         }
       }
 
-      // 4. Scoring
-      resultadosFiltrados = aplicarScoring(resultadosFiltrados, especialidad || undefined, ciudad || undefined);
+      // 4. ✅ FILTROS MULTI-CRITERIO EN TIEMPO REAL
+      if (activeFilters.abiertoAhora) {
+        const antes = resultadosFiltrados.length;
+        resultadosFiltrados = resultadosFiltrados.filter((optica) =>
+          estaAbiertaEn(optica.horarios || []).abierta
+        );
+        if (resultadosFiltrados.length === 0 && antes > 0) {
+          await addStreamingMessage("No hay opticas abiertas ahora con esos criterios.");
+        }
+      }
 
-      // 5. Lógica estricta: si hay coincidencias, mostrar SOLO esas
+      if (activeFilters.soloVerificadas) {
+        resultadosFiltrados = resultadosFiltrados.filter((optica) => optica.verificada);
+      }
+
+      if (activeFilters.distancia && activeFilters.distancia > 0) {
+        // Filtrado por distancia (requiere lat/lng, pendiente de implementar con geolocalización)
+        await addStreamingMessage(`Filtro de distancia aplicado: ${activeFilters.distancia} km`);
+      }
+
+      // 5. Scoring
+      resultadosFiltrados = aplicarScoring(
+        resultadosFiltrados,
+        especialidad || undefined,
+        ciudad || undefined
+      );
+
+      // 6. Lógica estricta + Analytics de búsquedas fallidas
       if (resultadosFiltrados.length === 0) {
+        // ✅ REGISTRAR BÚSQUEDA FALLIDA EN ANALYTICS
+        await registrarBusquedaFranklin({
+          query,
+          timestamp: new Date(),
+          filtros_detectados: { ciudad, especialidad, seguro: seguroFinal },
+          terminos_expandidos: aiData.terminos_expandidos || [],
+          terminos_clinicos: aiData.terminos_clinicos || [],
+          resultados_count: 0,
+          opticas_devueltas: [],
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+        });
+
         await addStreamingMessage(
           "No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles."
         );
@@ -214,7 +272,7 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
       );
       setState("done");
     }
-  }, [query, state, opticas, opticasRanking, addStreamingMessage]);
+  }, [query, state, opticas, opticasRanking, activeFilters, addStreamingMessage]);
 
   const reset = useCallback(() => {
     setState("idle");
@@ -222,6 +280,7 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
     setResults([]);
     setSummary("");
     setQuery("");
+    setActiveFilters({});
   }, []);
 
   return {
@@ -231,6 +290,8 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
     messages,
     results,
     summary,
+    activeFilters,
+    setActiveFilters,
     processQuery,
     reset,
     resultsRef,

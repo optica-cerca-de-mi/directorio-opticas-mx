@@ -22,6 +22,8 @@ export default function FranklinModule({
     messages,
     results,
     summary,
+    activeFilters,
+    setActiveFilters,
     processQuery,
     reset,
     resultsRef,
@@ -35,6 +37,8 @@ export default function FranklinModule({
         onSearch={processQuery}
         isThinking={state === "thinking"}
         sugerencias={sugerencias}
+        activeFilters={activeFilters}
+        setActiveFilters={setActiveFilters}
       />
       <FranklinResults
         state={state}
