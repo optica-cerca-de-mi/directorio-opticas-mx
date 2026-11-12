@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles, Search, Loader2, Filter, Clock, ShieldCheck, BadgeCheck } from "lucide-react";
+import { Sparkles, Search, Loader2, Filter, Clock, BadgeCheck, LocateFixed, Star } from "lucide-react";
 import type { ActiveFilters } from "./hooks/useFranklin";
 
 interface FranklinSearchProps {
@@ -29,14 +29,14 @@ export default function FranklinSearch({
   activeFilters,
   setActiveFilters,
 }: FranklinSearchProps) {
-  const toggleFilter = (key: keyof ActiveFilters, value?: any) => {
+  const toggleFilter = (key: keyof ActiveFilters) => {
     setActiveFilters({
       ...activeFilters,
-      [key]: activeFilters[key] ? undefined : (value ?? true),
+      [key]: !activeFilters[key],
     });
   };
 
-  const hayFiltrosActivos = Object.values(activeFilters).some((v) => v !== undefined);
+  const hayFiltrosActivos = Object.values(activeFilters).some((v) => v === true);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -91,7 +91,7 @@ export default function FranklinSearch({
           </button>
         </div>
 
-        {/* ✅ FILTROS MULTI-CRITERIO */}
+        {/* ✅ FILTROS MULTI-CRITERIO ACTUALIZADOS */}
         <div className="pt-3 mt-3 border-t border-gray-100">
           <div className="flex items-center gap-2 mb-2">
             <Filter className="w-3 h-3 text-gray-500" />
@@ -131,27 +131,27 @@ export default function FranklinSearch({
             </button>
 
             <button
-              onClick={() => toggleFilter("seguroEspecifico", "GNP")}
+              onClick={() => toggleFilter("cercaDeMi")}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1 ${
-                activeFilters.seguroEspecifico === "GNP"
-                  ? "bg-amber-100 border-amber-300 text-amber-800 font-semibold"
+                activeFilters.cercaDeMi
+                  ? "bg-purple-100 border-purple-300 text-purple-800 font-semibold"
                   : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              <ShieldCheck className="w-3 h-3" />
-              Acepta GNP
+              <LocateFixed className="w-3 h-3" />
+              Cerca de mi (5 km)
             </button>
 
             <button
-              onClick={() => toggleFilter("seguroEspecifico", "AXA")}
+              onClick={() => toggleFilter("mejorCalificadas")}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors flex items-center gap-1 ${
-                activeFilters.seguroEspecifico === "AXA"
+                activeFilters.mejorCalificadas
                   ? "bg-amber-100 border-amber-300 text-amber-800 font-semibold"
                   : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              <ShieldCheck className="w-3 h-3" />
-              Acepta AXA
+              <Star className="w-3 h-3" />
+              Mejor calificadas
             </button>
           </div>
         </div>

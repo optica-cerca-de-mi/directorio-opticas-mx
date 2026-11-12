@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles, X, Loader2, CheckCircle2, MapPin, Star, ArrowRight } from "lucide-react";
+import { Sparkles, X, Loader2, CheckCircle2, MapPin, Star, ArrowRight, LocateFixed } from "lucide-react";
 import { estaAbiertaEn } from "@/lib/ranking-engine";
 import type { FranklinMessage, OpticaTop } from "./hooks/useFranklin";
 
@@ -104,6 +104,8 @@ export default function FranklinResults({
                 {results.map((optica) => {
                   const { abierta } = estaAbiertaEn(optica.horarios || []);
                   const imagen = optica.fotos?.[0]?.url;
+                  const distancia = (optica as any).distanciaKm;
+
                   return (
                     <Link
                       key={optica.id}
@@ -130,6 +132,15 @@ export default function FranklinResults({
                               }`}
                             >
                               {optica.plan === "premium_plus" ? "PREMIUM+" : "PREMIUM"}
+                            </span>
+                          </div>
+                        )}
+                        {/* Badge de distancia */}
+                        {distancia !== null && distancia !== undefined && (
+                          <div className="absolute bottom-2 right-2">
+                            <span className="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-bold rounded-full flex items-center gap-1">
+                              <LocateFixed className="w-2.5 h-2.5" />
+                              {distancia < 1 ? `${Math.round(distancia * 1000)} m` : `${distancia.toFixed(1)} km`}
                             </span>
                           </div>
                         )}

@@ -35,6 +35,8 @@ export interface OpticaTop {
   whatsapp?: string;
   telefono?: string;
   urlGoogleMaps?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 export interface FranklinMessage {
@@ -51,10 +53,9 @@ export interface FranklinFilters {
 
 export interface ActiveFilters {
   abiertoAhora?: boolean;
-  distancia?: number; // km, 0 = sin límite
-  precio?: "low" | "medium" | "high";
-  seguroEspecifico?: string;
   soloVerificadas?: boolean;
+  cercaDeMi?: boolean; // Activa geolocalización y filtro de 5km
+  mejorCalificadas?: boolean; // Ordena por calificaciónGoogle
 }
 
 export interface FranklinResponse {
@@ -77,11 +78,35 @@ export interface UseFranklinReturn {
   processQuery: () => Promise<void>;
   reset: () => void;
   resultsRef: React.RefObject<HTMLDivElement | null>;
+  ubicacionUsuario: { lat: number; lng: number } | null;
 }
 
 interface UseFranklinProps {
   opticas: OpticaTop[];
   opticasRanking: OpticaTop[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILIDAD: Calcular distancia entre dos puntos (fórmula Haversine)
+// ═══════════════════════════════════════════════════════════════
+
+function calcularDistanciaKm(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -95,6 +120,7 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
   const [results, setResults] = useState<OpticaTop[]>([]);
   const [summary, setSummary] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>({});
+  const [ubicacionUsuario, setUbicacionUsuario] = useState<{ lat: number; lng: number } | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const addStreamingMessage = useCallback(async (text: string) => {
@@ -105,6 +131,26 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
       prev.map((m) => (m.id === msgId ? { ...m, type: "success" } : m))
     );
     await new Promise((resolve) => setTimeout(resolve, 300));
+  }, []);
+
+  // ✅ Obtener ubicación del usuario cuando se activa "Cerca de mi"
+  const obtenerUbicacionUsuario = useCallback((): Promise<{ lat: number; lng: number } | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
   }, []);
 
   const processQuery = useCallback(async () => {
@@ -135,12 +181,10 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
       const aiData: FranklinResponse = result.data;
       const { ciudad, especialidad, seguro } = aiData.filtros;
 
-      // Mostrar pasos de pensamiento de la IA
       for (const paso of aiData.pasos_pensamiento) {
         await addStreamingMessage(paso);
       }
 
-      // Filtrado con respaldo jerárquico
       let resultadosFiltrados = [...opticas];
       let hayCoincidenciasExactas = true;
       let hayCoincidenciaEspecialidad = false;
@@ -163,7 +207,6 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         if (resultadosFiltrados.length > 0) {
           hayCoincidenciaEspecialidad = true;
         } else if (antes > 0) {
-          // RESPALDO: intentar con términos expandidos del diccionario
           const terminosRespaldo = aiData.terminos_expandidos || [];
           let encontrado = false;
 
@@ -188,18 +231,19 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         }
       }
 
-      // 3. Filtrar por seguro (IA o filtro manual)
-      const seguroFinal = seguro || activeFilters.seguroEspecifico;
-      if (seguroFinal) {
+      // 3. Filtrar por seguro
+      if (seguro) {
         const antes = resultadosFiltrados.length;
-        resultadosFiltrados = filtrarPorSeguro(resultadosFiltrados, seguroFinal);
+        resultadosFiltrados = filtrarPorSeguro(resultadosFiltrados, seguro);
         if (resultadosFiltrados.length === 0 && antes > 0) {
           hayCoincidenciasExactas = false;
-          await addStreamingMessage(`No encontramos opticas que acepten ${seguroFinal}.`);
+          await addStreamingMessage(`No encontramos opticas que acepten ${seguro}.`);
         }
       }
 
       // 4. ✅ FILTROS MULTI-CRITERIO EN TIEMPO REAL
+
+      // 4a. Abierto ahora
       if (activeFilters.abiertoAhora) {
         const antes = resultadosFiltrados.length;
         resultadosFiltrados = resultadosFiltrados.filter((optica) =>
@@ -210,29 +254,90 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         }
       }
 
+      // 4b. Solo verificadas
       if (activeFilters.soloVerificadas) {
         resultadosFiltrados = resultadosFiltrados.filter((optica) => optica.verificada);
       }
 
-      if (activeFilters.distancia && activeFilters.distancia > 0) {
-        // Filtrado por distancia (requiere lat/lng, pendiente de implementar con geolocalización)
-        await addStreamingMessage(`Filtro de distancia aplicado: ${activeFilters.distancia} km`);
+      // 4c. ✅ Cerca de mi (5 km)
+      if (activeFilters.cercaDeMi) {
+        let ubicacion = ubicacionUsuario;
+
+        // Si no tenemos ubicación, solicitarla
+        if (!ubicacion) {
+          await addStreamingMessage("Obteniendo tu ubicacion para buscar opticas cercanas...");
+          ubicacion = await obtenerUbicacionUsuario();
+          if (ubicacion) {
+            setUbicacionUsuario(ubicacion);
+          }
+        }
+
+        if (ubicacion) {
+          const antes = resultadosFiltrados.length;
+          resultadosFiltrados = resultadosFiltrados
+            .map((optica) => {
+              if (!optica.latitud || !optica.longitud) {
+                return { ...optica, distanciaKm: null };
+              }
+              const distancia = calcularDistanciaKm(
+                ubicacion.lat,
+                ubicacion.lng,
+                optica.latitud,
+                optica.longitud
+              );
+              return { ...optica, distanciaKm: distancia };
+            })
+            .filter((optica) => {
+              // Incluir ópticas sin coordenadas (no las descartamos, pero van al final)
+              if (optica.distanciaKm === null) return true;
+              return optica.distanciaKm <= 5;
+            })
+            .sort((a, b) => {
+              // Ordenar por distancia (las sin coordenadas van al final)
+              if (a.distanciaKm === null && b.distanciaKm === null) return 0;
+              if (a.distanciaKm === null) return 1;
+              if (b.distanciaKm === null) return -1;
+              return a.distanciaKm - b.distanciaKm;
+            });
+
+          const despues = resultadosFiltrados.filter((o) => o.distanciaKm !== null && o.distanciaKm <= 5).length;
+          if (despues === 0 && antes > 0) {
+            await addStreamingMessage("No hay opticas a menos de 5 km de tu ubicacion.");
+          } else if (despues > 0) {
+            await addStreamingMessage(`Encontramos ${despues} optica${despues > 1 ? "s" : ""} a menos de 5 km de ti.`);
+          }
+        } else {
+          await addStreamingMessage("No pudimos obtener tu ubicacion. Activa los permisos de geolocalizacion en tu navegador.");
+        }
       }
 
-      // 5. Scoring
-      resultadosFiltrados = aplicarScoring(
-        resultadosFiltrados,
-        especialidad || undefined,
-        ciudad || undefined
-      );
+      // 4d. ✅ Mejor calificadas (ordenamiento)
+      if (activeFilters.mejorCalificadas) {
+        resultadosFiltrados = resultadosFiltrados.sort((a, b) => {
+          const califA = a.calificacionGoogle || 0;
+          const califB = b.calificacionGoogle || 0;
+          if (califB !== califA) return califB - califA;
+          // Desempate por número de reseñas
+          return (b.numResenas || 0) - (a.numResenas || 0);
+        });
+        await addStreamingMessage("Ordenando por mejor calificacion.");
+      }
+
+      // 5. Scoring base (si no hay filtro de mejor calificadas)
+      if (!activeFilters.mejorCalificadas) {
+        resultadosFiltrados = aplicarScoring(
+          resultadosFiltrados,
+          especialidad || undefined,
+          ciudad || undefined
+        );
+      }
 
       // 6. Lógica estricta + Analytics de búsquedas fallidas
       if (resultadosFiltrados.length === 0) {
-        // ✅ REGISTRAR BÚSQUEDA FALLIDA EN ANALYTICS
         await registrarBusquedaFranklin({
           query,
           timestamp: new Date(),
-          filtros_detectados: { ciudad, especialidad, seguro: seguroFinal },
+          filtros_detectados: { ciudad, especialidad, seguro },
           terminos_expandidos: aiData.terminos_expandidos || [],
           terminos_clinicos: aiData.terminos_clinicos || [],
           resultados_count: 0,
@@ -248,7 +353,7 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }
 
-      // Mensaje final inteligente
+      // Mensaje final
       let resumenFinal = aiData.mensaje_final;
       if (!hayCoincidenciasExactas) {
         resumenFinal = `No encontramos coincidencias exactas, pero estas son las mejores opciones disponibles en ${ciudad || "tu zona"}.`;
@@ -272,7 +377,7 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
       );
       setState("done");
     }
-  }, [query, state, opticas, opticasRanking, activeFilters, addStreamingMessage]);
+  }, [query, state, opticas, opticasRanking, activeFilters, ubicacionUsuario, addStreamingMessage, obtenerUbicacionUsuario]);
 
   const reset = useCallback(() => {
     setState("idle");
@@ -295,5 +400,6 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
     processQuery,
     reset,
     resultsRef,
+    ubicacionUsuario,
   };
 }
