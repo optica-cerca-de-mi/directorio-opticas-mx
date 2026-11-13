@@ -613,19 +613,6 @@ export default function DisenarFicha() {
     await updateDoc(docRef, sanitizedData);
   }, [needsGeocoding]);
 
-const updateField = ...
-const eliminarFotoGaleria = ...
-const ejecutarGuardado = useCallback(...)
-  ...
-}, [needsGeocoding]);
-
-const guardarManual = async () => { ... }
-
-useEffect(() => {
-  if (!hasChanges || !optica) return;
-  ...
-}, [optica, hasChanges, ejecutarGuardado]);
-
   const guardarManual = async () => {
     if (!optica) return;
     try {
