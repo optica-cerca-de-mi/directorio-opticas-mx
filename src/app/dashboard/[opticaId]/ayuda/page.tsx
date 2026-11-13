@@ -35,19 +35,18 @@ export default function AyudaPage() {
     horarioAtencion: "Lunes a Viernes de 9:00 a 18:00 hrs",
   };
 
-// Filtrar FAQ por búsqueda (con validación robusta)
-const faqFiltrado = faqData
-const faqFiltrado = Array.isArray(faqData)
-  ? faqData
-      .filter((cat) => cat && cat.preguntas && Array.isArray(cat.preguntas))
-      .map((cat) => ({
-        ...cat,
-        preguntas: cat.preguntas
-          .filter((p) => p && p.pregunta && p.respuesta)
-          .filter((p) => p.pregunta.trim() !== "" && p.respuesta.trim() !== ""),
-      }))
-      .filter((cat) => cat.preguntas.length > 0)
-  : [];
+  // ✅ Filtrar FAQ por búsqueda (con validación robusta contra undefined/no-array)
+  const faqFiltrado = Array.isArray(faqData)
+    ? faqData
+        .filter((cat) => cat && cat.preguntas && Array.isArray(cat.preguntas))
+        .map((cat) => ({
+          ...cat,
+          preguntas: cat.preguntas
+            .filter((p) => p && p.pregunta && p.respuesta)
+            .filter((p) => p.pregunta.trim() !== "" && p.respuesta.trim() !== ""),
+        }))
+        .filter((cat) => cat.preguntas.length > 0)
+    : [];
 
   const toggleCategoria = (categoria: string) => {
     setCategoriaAbierta(categoriaAbierta === categoria ? null : categoria);
