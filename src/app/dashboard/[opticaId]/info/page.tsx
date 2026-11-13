@@ -6,7 +6,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   Save, Loader2, CheckCircle, AlertCircle, Store, MapPin, Phone,
-  Clock, Globe, Share2, Camera, Calendar, LocateFixed,
+  Clock, Globe, Share2, Camera, Calendar, LocateFixed, ArrowRight,
 } from "lucide-react";
 
 // Valores que pertenecen al ciclo de vida de la cuenta, NO al estado geográfico
@@ -23,19 +23,21 @@ export default function InfoPage() {
   const [error, setError] = useState("");
   const [needsGeocoding, setNeedsGeocoding] = useState(false);
 
+  // ✅ horarios ahora es solo lectura (array original preservado)
+  const [horariosVista, setHorariosVista] = useState<string[]>([]);
+
   const [formData, setFormData] = useState({
     nombre: "",
     direccion: "",
     ciudad: "",
-    estadoGeografico: "",   // ✅ NUEVO: estado de ubicación
-    cp: "",                 // ✅ NUEVO
+    estadoGeografico: "",
+    cp: "",
     telefono: "",
     whatsapp: "",
     sitioWeb: "",
     facebook: "",
     instagram: "",
     descripcion: "",
-    horarios: "",
     linkAgenda: "",
     latitud: null as number | null,
     longitud: null as number | null,
@@ -48,14 +50,15 @@ export default function InfoPage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          // ✅ Horarios: convertir array de objetos a texto legible
-          const horariosTexto = Array.isArray(data.horarios)
-            ? data.horarios
-                .map((h: any) => `${h.dia}: ${h.cerrado ? "Cerrado" : `${h.apertura} - ${h.cierre}`}`)
-                .join("\n")
-            : (data.horarios || "");
 
-          // ✅ Estado geográfico: usa estadoGeografico; si no existe, toma estado SOLO si no es un valor de cuenta
+          // Solo lectura: formatear array de horarios a líneas de texto
+          const horariosArray = Array.isArray(data.horarios) ? data.horarios : [];
+          setHorariosVista(
+            horariosArray.map((h: any) =>
+              `${h.dia}: ${h.cerrado ? "Cerrado" : `${h.apertura} - ${h.cierre}`}`
+            )
+          );
+
           const estadoGeo =
             data.estadoGeografico ||
             (ESTADOS_DE_CUENTA.includes(String(data.estado || "").toLowerCase()) ? "" : data.estado || "");
@@ -72,7 +75,6 @@ export default function InfoPage() {
             facebook: data.facebook || "",
             instagram: data.instagram || "",
             descripcion: data.descripcion || "",
-            horarios: horariosTexto,
             linkAgenda: data.linkAgenda || "",
             latitud: data.latitud || null,
             longitud: data.longitud || null,
@@ -102,7 +104,6 @@ export default function InfoPage() {
     try {
       let dataToSave = { ...formData };
 
-      // ✅ Geocoding con el estado geográfico CORRECTO (no "activa")
       if (needsGeocoding && (formData.direccion || formData.ciudad)) {
         try {
           const response = await fetch("/api/geocode", {
@@ -111,7 +112,7 @@ export default function InfoPage() {
             body: JSON.stringify({
               direccion: formData.direccion,
               ciudad: formData.ciudad,
-              estado: formData.estadoGeografico,   // ✅ aquí va el geográfico
+              estado: formData.estadoGeografico,
               cp: formData.cp,
             }),
           });
@@ -127,7 +128,7 @@ export default function InfoPage() {
       }
 
       const docRef = doc(db, "opticas", opticaId);
-      // ✅ Guardamos estadoGeografico; NO tocamos 'estado' (se preserva "activa" por merge)
+      // ✅ NO incluimos horarios aquí. El array original queda intacto por merge:true.
       await setDoc(
         docRef,
         {
@@ -253,14 +254,24 @@ export default function InfoPage() {
           </div>
         </div>
 
+        {/* ✅ HORARIOS: solo lectura + enlace a la sección correcta */}
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2"><Clock className="w-5 h-5" />Horarios</h2>
-          <label className="block text-sm font-semibold text-gray-700 mb-1.5">Horario de atención (texto)</label>
-          <textarea value={formData.horarios} onChange={(e) => handleChange("horarios", e.target.value)} rows={3}
-            placeholder="Lunes a Viernes: 9:00 - 19:00&#10;Sábados: 10:00 - 14:00&#10;Domingos: Cerrado"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 resize-none" />
-          <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" />
-            Para gestionar horarios por día con apertura/cierre, usa la sección <strong>Diseña tu Ficha</strong>.</p>
+          {horariosVista.length > 0 ? (
+            <div className="space-y-1.5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              {horariosVista.map((linea, i) => (
+                <p key={i} className="text-sm text-gray-700">{linea}</p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 italic">Sin horarios configurados.</p>
+          )}
+          <Link href={`/dashboard/${opticaId}/disenar-ficha`} className="inline-flex items-center gap-1.5 mt-3 text-sm font-semibold text-navy-700 hover:text-navy-900">
+            Editar horarios en "Diseña tu Ficha" <ArrowRight className="w-4 h-4" />
+          </Link>
+          <p className="text-xs text-gray-500 mt-1">
+            Los horarios se gestionan con días, apertura y cierre desde la sección Diseña tu Ficha.
+          </p>
         </div>
 
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">

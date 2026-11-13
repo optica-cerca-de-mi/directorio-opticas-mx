@@ -251,7 +251,8 @@ export const calcularQualityScore = (
   }
 
   // Horarios configurados (15 pts)
-  const horariosConfig = (optica.horarios || []).filter((h: any) => !h.cerrado).length;
+  const horariosArray = Array.isArray(optica.horarios) ? optica.horarios : [];
+  const horariosConfig = horariosArray.filter((h: any) => !h.cerrado).length;
   if (horariosConfig >= 5) {
     desglose.horarios = 15;
   } else if (horariosConfig > 0) {
