@@ -362,7 +362,29 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
           resultadosFiltrados = opticasRanking.slice(0, 3);
         }
       } else {
-        resultadosFiltrados = resultadosFiltrados.slice(0, 6);
+        // ✅ Si "Cerca de mí" está activo y ya tenemos resultados, calcular distancias para mostrar badge
+        if (activeFilters.cercaDeMi && ubicacionUsuario) {
+          resultadosFiltrados = resultadosFiltrados
+            .map((optica) => {
+              if (!optica.latitud || !optica.longitud) return { ...optica, distanciaKm: null };
+              const distancia = calcularDistanciaKm(
+                ubicacionUsuario.lat,
+                ubicacionUsuario.lng,
+                optica.latitud,
+                optica.longitud
+              );
+              return { ...optica, distanciaKm: distancia };
+            })
+            .sort((a, b) => {
+              if (a.distanciaKm === null && b.distanciaKm === null) return 0;
+              if (a.distanciaKm === null) return 1;
+              if (b.distanciaKm === null) return -1;
+              return a.distanciaKm - b.distanciaKm;
+            })
+            .slice(0, 6);
+        } else {
+          resultadosFiltrados = resultadosFiltrados.slice(0, 6);
+        }
       }
 
       // Mensaje final
