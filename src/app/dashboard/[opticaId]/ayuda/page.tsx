@@ -37,18 +37,17 @@ export default function AyudaPage() {
 
 // Filtrar FAQ por búsqueda (con validación robusta)
 const faqFiltrado = faqData
-  .filter((cat) => cat && cat.preguntas && Array.isArray(cat.preguntas))
-  .map((cat) => ({
-    ...cat,
-    preguntas: cat.preguntas
-      .filter((p) => p && p.pregunta && p.respuesta) // Filtrar elementos válidos
-      .filter(
-        (p) =>
-          p.pregunta.toLowerCase().includes(busqueda.toLowerCase()) ||
-          p.respuesta.toLowerCase().includes(busqueda.toLowerCase())
-      ),
-  }))
-  .filter((cat) => cat.preguntas.length > 0);
+const faqFiltrado = Array.isArray(faqData)
+  ? faqData
+      .filter((cat) => cat && cat.preguntas && Array.isArray(cat.preguntas))
+      .map((cat) => ({
+        ...cat,
+        preguntas: cat.preguntas
+          .filter((p) => p && p.pregunta && p.respuesta)
+          .filter((p) => p.pregunta.trim() !== "" && p.respuesta.trim() !== ""),
+      }))
+      .filter((cat) => cat.preguntas.length > 0)
+  : [];
 
   const toggleCategoria = (categoria: string) => {
     setCategoriaAbierta(categoriaAbierta === categoria ? null : categoria);
@@ -168,12 +167,12 @@ const faqFiltrado = faqData
                     <div className="w-8 h-8 border-4 border-navy-200 border-t-navy-700 rounded-full animate-spin mx-auto mb-3"></div>
                     <p className="text-sm text-gray-500">Cargando recursos...</p>
                   </div>
-                ) : recursosData.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">
+                ) : !Array.isArray(recursosData) || recursosData.length === 0 ? (
+                  <p className="text-sm text-gray-500">
                     No hay recursos disponibles.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-4">
                     {recursosData.map((recurso, i) => {
                       const Icono = getIconoRecurso(recurso.icono);
                       return (
