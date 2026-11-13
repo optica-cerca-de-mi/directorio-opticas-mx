@@ -24,31 +24,38 @@ export default function AyudaPublicaPage() {
   const [busqueda, setBusqueda] = useState("");
 
   // Cargar datos dinámicos desde Firestore
-  const { data: faqData, loading: loadingFaq } = useConfig("faq");
-  const { data: recursosData, loading: loadingRecursos } = useConfig("recursos");
-  const { data: soporteData, loading: loadingSoporte } = useConfig("soporte");
+  const { data: faqRaw, loading: loadingFaq } = useConfig("faq");
+  const { data: recursosRaw, loading: loadingRecursos } = useConfig("recursos");
+  const { data: soporteRaw, loading: loadingSoporte } = useConfig("soporte");
 
-  // Soporte es un objeto envuelto en array
-  const soporte = soporteData?.[0] || {
+  // ✅ Extraer el array real si viene dentro de un objeto, o usar [] si es undefined
+  const faqData = Array.isArray(faqRaw) ? faqRaw : (faqRaw?.items || faqRaw?.preguntas || []);
+  const recursosData = Array.isArray(recursosRaw) ? recursosRaw : (recursosRaw?.items || recursosRaw?.recursos || []);
+  
+  // Soporte es un objeto, no un array
+  const soporte = Array.isArray(soporteRaw) ? soporteRaw[0] : (soporteRaw || {
     email: "soporte@laopticacercademi.com",
     whatsapp: "5512345678",
     telefono: "55 1234 5678",
     horarioAtencion: "Lunes a Viernes de 9:00 a 18:00 hrs",
-  };
+  });
 
-  // Filtrar FAQ por búsqueda (con validación robusta)
-  const faqFiltrado = (faqData || [])
-    .filter((cat: any) => cat && cat.preguntas && Array.isArray(cat.preguntas))    .map((cat: any) => ({
-      ...cat,
-      preguntas: cat.preguntas
-        .filter((p: any) => p && p.pregunta && p.respuesta)
-        .filter(
-          (p: any) =>
-            p.pregunta.toLowerCase().includes(busqueda.toLowerCase()) ||
-            p.respuesta.toLowerCase().includes(busqueda.toLowerCase())
-        ),
-    }))
-    .filter((cat: any) => cat.preguntas.length > 0);
+  // ✅ Filtrar FAQ por búsqueda (con validación robusta contra objetos no-array)
+  const faqFiltrado = Array.isArray(faqData)
+    ? faqData
+        .filter((cat) => cat && cat.preguntas && Array.isArray(cat.preguntas))
+        .map((cat) => ({
+          ...cat,
+          preguntas: cat.preguntas
+            .filter((p) => p && p.pregunta && p.respuesta)
+            .filter(
+              (p) =>
+                p.pregunta.toLowerCase().includes(busqueda.toLowerCase()) ||
+                p.respuesta.toLowerCase().includes(busqueda.toLowerCase())
+            ),
+        }))
+        .filter((cat) => cat.preguntas.length > 0)
+    : [];
 
   const toggleCategoria = (categoria: string) => {
     setCategoriaAbierta(categoriaAbierta === categoria ? null : categoria);
