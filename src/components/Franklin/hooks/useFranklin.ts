@@ -333,18 +333,34 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
           user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
         });
 
-        await addStreamingMessage(
-          "No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles."
-        );
-        const respaldo = opticasRanking.slice(0, 3);
-        // ✅ Si "Cerca de mí" está activo, anotar distancias también en el respaldo (sin filtrar por 5 km, para transparencia)
-        resultadosFiltrados = (ubicacionParaDistancia && activeFilters.cercaDeMi)
-          ? respaldo.map((optica) => {
+        // ✅ Si "Cerca de mí" está activo, mostrar las ópticas más cercanas (aunque estén fuera de 5 km)
+        if (activeFilters.cercaDeMi && ubicacionUsuario) {
+          await addStreamingMessage(
+            "No hay opticas a menos de 5 km de tu ubicacion. Te mostramos las mas cercanas disponibles."
+          );
+          
+          // Calcular distancias para todas las ópticas y ordenar por cercanía
+          resultadosFiltrados = opticasRanking
+            .map((optica) => {
               if (!optica.latitud || !optica.longitud) return { ...optica, distanciaKm: null };
-              const distancia = calcularDistanciaKm(ubicacionParaDistancia!.lat, ubicacionParaDistancia!.lng, optica.latitud, optica.longitud);
+              const distancia = calcularDistanciaKm(
+                ubicacionUsuario.lat,
+                ubicacionUsuario.lng,
+                optica.latitud,
+                optica.longitud
+              );
               return { ...optica, distanciaKm: distancia };
             })
-          : respaldo;
+            .filter((optica) => optica.distanciaKm !== null)
+            .sort((a, b) => a.distanciaKm - b.distanciaKm)
+            .slice(0, 3);
+        } else {
+          // Respaldo normal sin filtro de distancia
+          await addStreamingMessage(
+            "No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles."
+          );
+          resultadosFiltrados = opticasRanking.slice(0, 3);
+        }
       } else {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }
