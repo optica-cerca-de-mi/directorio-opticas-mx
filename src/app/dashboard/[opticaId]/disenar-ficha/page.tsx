@@ -454,27 +454,6 @@ export default function DisenarFicha() {
   }, [params.opticaId, router]);
 
   useEffect(() => {
-    if (!hasChanges || !optica) return;
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    
-    setSaveStatus("saving");
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        await ejecutarGuardado(optica);
-        setSaveStatus("saved");
-        setHasChanges(false);
-        setTimeout(() => setSaveStatus("idle"), 2000);
-      } catch (error: any) {
-        console.error("❌ Error al guardar:", error);
-        setSaveStatus("error");
-        setTimeout(() => setSaveStatus("idle"), 3000);
-      }
-    }, 2500); // 2.5s para dar tiempo al geocoding si es necesario
-
-    return () => { 
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); 
-    };
-  }, [optica, hasChanges, ejecutarGuardado]);
 
   const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
 
@@ -536,6 +515,19 @@ export default function DisenarFicha() {
     const sanitizedData = sanitizeForFirebase(rest);
     await updateDoc(docRef, sanitizedData);
   }, [needsGeocoding]);
+
+const updateField = ...
+const eliminarFotoGaleria = ...
+const ejecutarGuardado = useCallback(...)   ← definición primero
+  ...
+}, [needsGeocoding]);
+
+const guardarManual = async () => { ... }
+
+useEffect(() => {                            ← autoguardado AHORA abajo
+  if (!hasChanges || !optica) return;
+  ...
+}, [optica, hasChanges, ejecutarGuardado]);
 
   const guardarManual = async () => {
     if (!optica) return;

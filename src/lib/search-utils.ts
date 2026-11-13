@@ -4,7 +4,7 @@
  * Este archivo contiene funciones reutilizables para búsqueda y filtrado
  * que usan tanto Franklin (Home) como el Directorio (/opticas).
  *
- * Versión 2.0: Integración con OptiRelevance Engine
+ * Versión 2.1: Integración con OptiRelevance Engine + Corrección de campo estadoGeografico
  */
 
 import { calcularOptiRelevance, OptiRelevanceInput } from "./franklin-rank";
@@ -27,7 +27,7 @@ export const normalizarTexto = (texto: string): string => {
 };
 
 // ─────────────────────────────────────────────────────────────────
-// FILTRADO BÁSICO (Versión 1.0 - se mantiene para compatibilidad)
+// FILTRADO BÁSICO
 // ─────────────────────────────────────────────────────────────────
 
 /**
@@ -84,7 +84,8 @@ export const filtrarPorEspecialidad = (
 };
 
 /**
- * Filtra ópticas por ciudad
+ * Filtra ópticas por ciudad o estado geográfico
+ * ✅ CORRECCIÓN: Prioriza estadoGeografico, con fallback a estado por compatibilidad
  */
 export const filtrarPorCiudad = (
   opticas: any[],
@@ -97,7 +98,7 @@ export const filtrarPorCiudad = (
   return opticas.filter((optica) => {
     return (
       normalizarTexto(optica.ciudad || "").includes(ciudadNormalizada) ||
-      normalizarTexto(optica.estado || "").includes(ciudadNormalizada)
+      normalizarTexto(optica.estadoGeografico || optica.estado || "").includes(ciudadNormalizada)
     );
   });
 };
@@ -121,12 +122,11 @@ export const filtrarPorSeguro = (
 };
 
 // ─────────────────────────────────────────────────────────────────
-// SCORING CLÁSICO (Versión 1.0 - se mantiene para compatibilidad)
+// SCORING CLÁSICO (Mantenido por compatibilidad)
 // ─────────────────────────────────────────────────────────────────
 
 /**
  * Sistema de scoring clásico para ordenar resultados
- * (Versión anterior, mantenida por compatibilidad con Franklin)
  */
 export const aplicarScoring = (
   opticas: any[],
@@ -176,11 +176,12 @@ export const aplicarScoring = (
 };
 
 // ─────────────────────────────────────────────────────────────────
-// OPTI RELEVANCE ENGINE (Versión 2.0 - NUEVO)
+// OPTI RELEVANCE ENGINE (Versión 2.0+)
 // ─────────────────────────────────────────────────────────────────
 
 /**
  * Convierte una óptica del formato de Firestore al formato de OptiRelevanceInput
+ * ✅ CORRECCIÓN: Mapea estadoGeografico con fallback a estado
  */
 const toRelevanceInput = (optica: any): OptiRelevanceInput => ({
   id: optica.id,
@@ -199,16 +200,11 @@ const toRelevanceInput = (optica: any): OptiRelevanceInput => ({
   productosDestacados: optica.productosDestacados,
   promociones: optica.promociones,
   ciudad: optica.ciudad,
-  estado: optica.estado,
+  estado: optica.estadoGeografico || optica.estado, // ✅ FIX aplicado aquí
 });
 
 /**
  * Ordena ópticas usando el OptiRelevance Engine completo.
- * 
- * Esta es la versión 2.0 del scoring:
- * - Calcula Relevancia × Quality Score × Performance × Plan Multiplier
- * - Es más preciso que aplicarScoring() porque evalúa la completitud de la ficha
- * - Ideal para cuando NO hay un término de búsqueda específico (ranking general)
  */
 export const ordenarPorOptiRelevance = (
   opticas: any[],
@@ -230,13 +226,6 @@ export const ordenarPorOptiRelevance = (
 
 /**
  * FUNCIÓN MAESTRA: Busca + Filtra + Ordena con OptiRelevance en un solo paso.
- * 
- * Reemplaza la necesidad de llamar múltiples funciones manualmente.
- * Ideal para Franklin y para el Directorio cuando se quiere el ranking más preciso.
- * 
- * @param opticas - Lista completa de ópticas
- * @param filtros - Objeto con los filtros a aplicar
- * @param usarOptiRelevance - Si true, usa el motor completo; si false, usa el scoring clásico
  */
 export const buscarConRanking = (
   opticas: any[],
@@ -250,7 +239,6 @@ export const buscarConRanking = (
 ): any[] => {
   let resultados = [...opticas];
 
-  // 1. Aplicar filtros (en orden de especificidad)
   if (filtros.ciudad) {
     resultados = filtrarPorCiudad(resultados, filtros.ciudad);
   }
@@ -267,7 +255,6 @@ export const buscarConRanking = (
     resultados = buscarPorTexto(resultados, filtros.texto);
   }
 
-  // 2. Ordenar resultados
   if (usarOptiRelevance) {
     resultados = ordenarPorOptiRelevance(resultados, filtros.texto);
   } else {
@@ -279,7 +266,6 @@ export const buscarConRanking = (
 
 /**
  * Calcula el OptiRelevance Score de una sola óptica (para mostrar en el Dashboard).
- * Devuelve el score completo con sugerencias.
  */
 export const obtenerScoreDeOptica = (optica: any) => {
   const input = toRelevanceInput(optica);

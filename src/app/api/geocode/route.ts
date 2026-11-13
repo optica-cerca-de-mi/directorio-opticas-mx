@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Endpoint de geocoding usando Nominatim (OpenStreetMap)
- * Gratuito, sin API key, con límite de 1 request/segundo
+ * Gratuito, sin API key, con límite de 1 request/segundo.
  */
+
+// Valores que pertenecen al ciclo de vida de la cuenta, NO al estado geográfico
+const ESTADOS_DE_CUENTA = ["activa", "inactivo", "inactiva", "eliminada", "pendiente", "vencido"];
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -16,11 +20,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Construir query de búsqueda
-    const partes = [direccion, ciudad, estado, cp, 'Mexico'].filter(Boolean);
+    // ✅ Sanitizar: si el estado es un valor de cuenta, ignorarlo en la búsqueda
+    const estadoValido = ESTADOS_DE_CUENTA.includes(String(estado || "").toLowerCase()) ? "" : estado;
+    
+    // Construir query de búsqueda optimizada para México
+    const partes = [direccion, ciudad, estadoValido, cp, 'Mexico'].filter(Boolean);
     const query = partes.join(', ');
 
-    // Llamar a Nominatim
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=mx`,
       {
