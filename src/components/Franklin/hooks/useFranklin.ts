@@ -180,6 +180,7 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
 
       const aiData: FranklinResponse = result.data;
       const { ciudad, especialidad, seguro } = aiData.filtros;
+      let ubicacionParaDistancia: { lat: number; lng: number } | null = ubicacionUsuario;
 
       for (const paso of aiData.pasos_pensamiento) {
         await addStreamingMessage(paso);
@@ -262,8 +263,6 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
       // 4c. ✅ Cerca de mi (5 km)
       if (activeFilters.cercaDeMi) {
         let ubicacion = ubicacionUsuario;
-
-        // Si no tenemos ubicación, solicitarla
         if (!ubicacion) {
           await addStreamingMessage("Obteniendo tu ubicacion para buscar opticas cercanas...");
           ubicacion = await obtenerUbicacionUsuario();
@@ -273,27 +272,16 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         }
 
         if (ubicacion) {
+          ubicacionParaDistancia = ubicacion;
           const antes = resultadosFiltrados.length;
           resultadosFiltrados = resultadosFiltrados
             .map((optica) => {
-              if (!optica.latitud || !optica.longitud) {
-                return { ...optica, distanciaKm: null };
-              }
-              const distancia = calcularDistanciaKm(
-                ubicacion.lat,
-                ubicacion.lng,
-                optica.latitud,
-                optica.longitud
-              );
+              if (!optica.latitud || !optica.longitud) return { ...optica, distanciaKm: null };
+              const distancia = calcularDistanciaKm(ubicacion.lat, ubicacion.lng, optica.latitud, optica.longitud);
               return { ...optica, distanciaKm: distancia };
             })
-            .filter((optica) => {
-              // Incluir ópticas sin coordenadas (no las descartamos, pero van al final)
-              if (optica.distanciaKm === null) return true;
-              return optica.distanciaKm <= 5;
-            })
+            .filter((optica) => optica.distanciaKm === null || optica.distanciaKm <= 5)
             .sort((a, b) => {
-              // Ordenar por distancia (las sin coordenadas van al final)
               if (a.distanciaKm === null && b.distanciaKm === null) return 0;
               if (a.distanciaKm === null) return 1;
               if (b.distanciaKm === null) return -1;
@@ -348,7 +336,15 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
         await addStreamingMessage(
           "No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles."
         );
-        resultadosFiltrados = opticasRanking.slice(0, 3);
+        const respaldo = opticasRanking.slice(0, 3);
+        // ✅ Si "Cerca de mí" está activo, anotar distancias también en el respaldo (sin filtrar por 5 km, para transparencia)
+        resultadosFiltrados = (ubicacionParaDistancia && activeFilters.cercaDeMi)
+          ? respaldo.map((optica) => {
+              if (!optica.latitud || !optica.longitud) return { ...optica, distanciaKm: null };
+              const distancia = calcularDistanciaKm(ubicacionParaDistancia!.lat, ubicacionParaDistancia!.lng, optica.latitud, optica.longitud);
+              return { ...optica, distanciaKm: distancia };
+            })
+          : respaldo;
       } else {
         resultadosFiltrados = resultadosFiltrados.slice(0, 6);
       }

@@ -117,15 +117,15 @@ export default function InfoPage() {
       let dataToSave = { ...formData };
 
       if (needsGeocoding && (formData.direccion || formData.ciudad)) {
-        // PRIORIDAD 1: extraer del link de Google Maps (parseo local, instantáneo)
         const coordsDeMaps = extraerCoordenadasDeGoogleMaps(urlGoogleMaps);
         if (coordsDeMaps) {
           dataToSave.latitud = coordsDeMaps.lat;
           dataToSave.longitud = coordsDeMaps.lng;
+          // ✅ Sincronizar el estado visible para que la caja gris muestre las coordenadas
+          setFormData((prev) => ({ ...prev, latitud: coordsDeMaps.lat, longitud: coordsDeMaps.lng }));
           setGeoMensaje("Coordenadas extraídas del link de Google Maps.");
           setNeedsGeocoding(false);
         } else {
-          // PRIORIDAD 2: endpoint con fallback jerárquico
           try {
             const response = await fetch("/api/geocode", {
               method: "POST",
@@ -141,6 +141,8 @@ export default function InfoPage() {
             if (geoData.success && geoData.latitud && geoData.longitud) {
               dataToSave.latitud = geoData.latitud;
               dataToSave.longitud = geoData.longitud;
+              // ✅ Sincronizar el estado visible
+              setFormData((prev) => ({ ...prev, latitud: geoData.latitud, longitud: geoData.longitud }));
               setNeedsGeocoding(false);
               setGeoMensaje(
                 geoData.fuente === "direccion-exacta"
