@@ -44,6 +44,8 @@ interface OpticaTop {
   whatsapp?: string;
   telefono?: string;
   urlGoogleMaps?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -162,7 +164,7 @@ export default function HomePage() {
               especialidadesPersonalizadas: data.especialidadesPersonalizadas || [],
               segurosAceptados: data.segurosAceptados || [],
               fotos: data.fotos || [], logo: data.logo,
-              slug: data.slug || doc.id, descripcion: data.descripcion, horarios: data.horarios || [],
+              slug: data.slug || doc.id, descripcion: data.descripcion, horarios: data.horarios || [], latitud: data.latitud ?? null, longitud: data.longitud ?? null,
               verificada: data.verificado || data.plan !== "free", whatsapp: data.whatsapp,
               telefono: data.telefono, urlGoogleMaps: data.urlGoogleMaps,
             } as OpticaTop);
