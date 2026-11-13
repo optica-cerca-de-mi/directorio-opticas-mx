@@ -333,19 +333,18 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
           user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
         });
 
-        // ✅ Si "Cerca de mí" está activo, mostrar las ópticas más cercanas (aunque estén fuera de 5 km)
-        if (activeFilters.cercaDeMi && ubicacionUsuario) {
+        // ✅ USAR ubicacionParaDistancia (variable local) en lugar de ubicacionUsuario (estado asíncrono)
+        if (activeFilters.cercaDeMi && ubicacionParaDistancia) {
           await addStreamingMessage(
             "No hay opticas a menos de 5 km de tu ubicacion. Te mostramos las mas cercanas disponibles."
           );
-          
-          // Calcular distancias para todas las ópticas y ordenar por cercanía
+
           resultadosFiltrados = opticasRanking
             .map((optica) => {
               if (!optica.latitud || !optica.longitud) return { ...optica, distanciaKm: null };
               const distancia = calcularDistanciaKm(
-                ubicacionUsuario.lat,
-                ubicacionUsuario.lng,
+                ubicacionParaDistancia.lat,
+                ubicacionParaDistancia.lng,
                 optica.latitud,
                 optica.longitud
               );
@@ -355,21 +354,20 @@ export function useFranklin({ opticas, opticasRanking }: UseFranklinProps): UseF
             .sort((a, b) => a.distanciaKm - b.distanciaKm)
             .slice(0, 3);
         } else {
-          // Respaldo normal sin filtro de distancia
           await addStreamingMessage(
             "No encontramos opticas que coincidan con tu busqueda. Te mostramos las mejores opciones disponibles."
           );
           resultadosFiltrados = opticasRanking.slice(0, 3);
         }
       } else {
-        // ✅ Si "Cerca de mí" está activo y ya tenemos resultados, calcular distancias para mostrar badge
-        if (activeFilters.cercaDeMi && ubicacionUsuario) {
+        // ✅ USAR ubicacionParaDistancia (variable local) en lugar de ubicacionUsuario (estado asíncrono)
+        if (activeFilters.cercaDeMi && ubicacionParaDistancia) {
           resultadosFiltrados = resultadosFiltrados
             .map((optica) => {
               if (!optica.latitud || !optica.longitud) return { ...optica, distanciaKm: null };
               const distancia = calcularDistanciaKm(
-                ubicacionUsuario.lat,
-                ubicacionUsuario.lng,
+                ubicacionParaDistancia.lat,
+                ubicacionParaDistancia.lng,
                 optica.latitud,
                 optica.longitud
               );
