@@ -78,7 +78,7 @@ export function useOptiRank({
       timestamp: new Date(),
       posicion,
       score,
-      perfil: opticasRanking.find((o) => o.id === opticaId)?.perfilDetectado || "desconocido",
+      perfil: (Array.isArray(opticasRanking) ? opticasRanking.find((o) => o.id === opticaId) : undefined)?.perfilDetectado || "desconocido",
     });
   };
 
@@ -90,7 +90,7 @@ export function useOptiRank({
       timestamp: new Date(),
       posicion,
       score,
-      perfil: opticasRanking.find((o) => o.id === opticaId)?.perfilDetectado || "desconocido",
+      perfil: (Array.isArray(opticasRanking) ? opticasRanking.find((o) => o.id === opticaId) : undefined)?.perfilDetectado || "desconocido",
     });
   };
 

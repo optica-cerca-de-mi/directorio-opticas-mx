@@ -154,7 +154,7 @@ export function estaAbiertaEn(
     "Sábado",
   ];
   const diaHoy = diasSemana[fecha.getDay()];
-  const horario = horarios.find((h) => h.dia === diaHoy);
+  const horario = Array.isArray(horarios) ? horarios.find((h) => h.dia === diaHoy) : undefined;
 
   if (!horario || horario.cerrado) {
     return { abierta: false, minutosParaCierre: -1 };
