@@ -16,6 +16,7 @@ import {
   Play,
 } from "lucide-react";
 import { useConfig } from "@/hooks/useConfig";
+import Link from "next/link";
 
 export default function AyudaPage() {
   const [categoriaAbierta, setCategoriaAbierta] = useState<string | null>("General");

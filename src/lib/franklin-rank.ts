@@ -363,7 +363,8 @@ export const generarSugerencias = (
     sugerencias.push("Crea una promoción activa para aumentar tu relevancia en búsquedas.");
   }
 
-  const horariosConfig = (optica.horarios || []).filter((h: any) => !h.cerrado).length;
+  const horariosArray = Array.isArray(optica.horarios) ? optica.horarios : [];
+const horariosConfig = horariosArray.filter((h: any) => !h.cerrado).length;
   if (horariosConfig < 5) {
     sugerencias.push("Completa tus horarios de atención para todos los días de la semana.");
   }
