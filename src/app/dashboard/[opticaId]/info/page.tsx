@@ -16,8 +16,8 @@ import {
   Globe,
   Share2,
   Camera,
-  FileText,
-  Calendar, // ✅ NUEVO: Ícono para la agenda
+  Calendar,
+  LocateFixed,
 } from "lucide-react";
 
 export default function InfoPage() {
@@ -29,12 +29,14 @@ export default function InfoPage() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
+  const [needsGeocoding, setNeedsGeocoding] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: "",
     direccion: "",
     ciudad: "",
     estado: "",
+    cp: "",
     telefono: "",
     whatsapp: "",
     sitioWeb: "",
@@ -42,7 +44,9 @@ export default function InfoPage() {
     instagram: "",
     descripcion: "",
     horarios: "",
-    linkAgenda: "", // ✅ NUEVO: Link externo de agenda (Calendly, Doctoralia, etc.)
+    linkAgenda: "",
+    latitud: null as number | null,
+    longitud: null as number | null,
   });
 
   useEffect(() => {
@@ -53,19 +57,28 @@ export default function InfoPage() {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
+          
+          // ✅ CORRECCIÓN: Si horarios es un array, lo convertimos a texto legible
+          const horariosTexto = Array.isArray(data.horarios)
+            ? data.horarios.map((h: any) => `${h.dia}: ${h.cerrado ? "Cerrado" : `${h.apertura} - ${h.cierre}`}`).join("\n")
+            : (data.horarios || "");
+
           setFormData({
             nombre: data.nombre || "",
             direccion: data.direccion || "",
             ciudad: data.ciudad || "",
             estado: data.estado || "",
+            cp: data.cp || "",
             telefono: data.telefono || "",
             whatsapp: data.whatsapp || "",
             sitioWeb: data.sitioWeb || "",
             facebook: data.facebook || "",
             instagram: data.instagram || "",
             descripcion: data.descripcion || "",
-            horarios: data.horarios || "",
-            linkAgenda: data.linkAgenda || "", // ✅ NUEVO: Cargar dato existente
+            horarios: horariosTexto,
+            linkAgenda: data.linkAgenda || "",
+            latitud: data.latitud || null,
+            longitud: data.longitud || null,
           });
         }
       } catch (err) {
@@ -81,6 +94,11 @@ export default function InfoPage() {
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    
+    // ✅ Marcar para geocoding si cambia algún campo de ubicación
+    if (["direccion", "ciudad", "estado", "cp"].includes(field)) {
+      setNeedsGeocoding(true);
+    }
   };
 
   const handleGuardar = async () => {
@@ -89,11 +107,44 @@ export default function InfoPage() {
     setError("");
 
     try {
+      let dataToSave = { ...formData };
+
+      // ✅ GEOCODING AUTOMÁTICO (misma lógica que en disenar-ficha)
+      if (needsGeocoding && (formData.direccion || formData.ciudad)) {
+        try {
+          const response = await fetch("/api/geocode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              direccion: formData.direccion,
+              ciudad: formData.ciudad,
+              estado: formData.estado,
+              cp: formData.cp,
+            }),
+          });
+          const geoData = await response.json();
+
+          if (geoData.success && geoData.latitud && geoData.longitud) {
+            dataToSave.latitud = geoData.latitud;
+            dataToSave.longitud = geoData.longitud;
+            setNeedsGeocoding(false);
+          }
+        } catch (err) {
+          console.error("Error al geocodificar:", err);
+          // Continuamos con el guardado aunque falle el geocoding para no bloquear al usuario
+        }
+      }
+
       const docRef = doc(db, "opticas", opticaId);
-      await setDoc(docRef, {
-        ...formData,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
+      await setDoc(
+        docRef,
+        {
+          ...dataToSave,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      
       setMensaje("¡Información actualizada correctamente!");
     } catch (err) {
       console.error("Error al guardar:", err);
@@ -112,7 +163,7 @@ export default function InfoPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-8 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-navy-900 font-display mb-2">
@@ -141,7 +192,7 @@ export default function InfoPage() {
       {/* Formulario */}
       <div className="space-y-6">
         {/* Datos básicos */}
-        <div className="card-premium p-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2">
             <Store className="w-5 h-5" />
             Datos básicos
@@ -156,7 +207,7 @@ export default function InfoPage() {
                 type="text"
                 value={formData.nombre}
                 onChange={(e) => handleChange("nombre", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
@@ -169,14 +220,14 @@ export default function InfoPage() {
                 onChange={(e) => handleChange("descripcion", e.target.value)}
                 rows={4}
                 placeholder="Describe tu óptica, servicios, experiencia..."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 resize-none"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 resize-none"
               />
             </div>
           </div>
         </div>
 
         {/* Ubicación */}
-        <div className="card-premium p-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2">
             <MapPin className="w-5 h-5" />
             Ubicación
@@ -192,7 +243,7 @@ export default function InfoPage() {
                 value={formData.direccion}
                 onChange={(e) => handleChange("direccion", e.target.value)}
                 placeholder="Calle, número, colonia"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
@@ -204,7 +255,7 @@ export default function InfoPage() {
                 type="text"
                 value={formData.ciudad}
                 onChange={(e) => handleChange("ciudad", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
@@ -216,14 +267,53 @@ export default function InfoPage() {
                 type="text"
                 value={formData.estado}
                 onChange={(e) => handleChange("estado", e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                placeholder="Ej: Estado de México"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Código Postal
+              </label>
+              <input
+                type="text"
+                value={formData.cp}
+                onChange={(e) => handleChange("cp", e.target.value)}
+                placeholder="Ej: 54700"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+              />
+            </div>
+
+            {/* ✅ Coordenadas (Solo lectura, para confirmar geocoding) */}
+            <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-2">
+                <LocateFixed className="w-4 h-4 text-navy-700" />
+                <span className="text-sm font-semibold text-gray-700">Coordenadas GPS</span>
+                {needsGeocoding && (
+                  <span className="text-xs text-amber-600 font-medium">(Se actualizarán al guardar)</span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs text-gray-500">Latitud</span>
+                  <p className="text-sm font-mono text-navy-900">
+                    {formData.latitud ? formData.latitud.toFixed(6) : "No geocodificado"}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500">Longitud</span>
+                  <p className="text-sm font-mono text-navy-900">
+                    {formData.longitud ? formData.longitud.toFixed(6) : "No geocodificado"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Contacto y Agenda */}
-        <div className="card-premium p-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2">
             <Phone className="w-5 h-5" />
             Contacto y Agenda
@@ -239,7 +329,7 @@ export default function InfoPage() {
                 value={formData.telefono}
                 onChange={(e) => handleChange("telefono", e.target.value)}
                 placeholder="5551234567"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
@@ -252,11 +342,10 @@ export default function InfoPage() {
                 value={formData.whatsapp}
                 onChange={(e) => handleChange("whatsapp", e.target.value)}
                 placeholder="5551234567"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
-            {/* ✅ NUEVO: Campo para Link de Agenda Externa */}
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-navy-700" />
@@ -267,7 +356,7 @@ export default function InfoPage() {
                 value={formData.linkAgenda}
                 onChange={(e) => handleChange("linkAgenda", e.target.value)}
                 placeholder="https://calendly.com/tu-optica o https://doctoralia.com.mx/..."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Si usas Calendly, Doctoralia u otra plataforma, pega el link aquí para que tus clientes reserven directamente.
@@ -277,7 +366,7 @@ export default function InfoPage() {
         </div>
 
         {/* Horarios */}
-        <div className="card-premium p-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5" />
             Horarios
@@ -285,20 +374,24 @@ export default function InfoPage() {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Horario de atención
+              Horario de atención (Texto libre)
             </label>
             <textarea
               value={formData.horarios}
               onChange={(e) => handleChange("horarios", e.target.value)}
               rows={3}
               placeholder="Lunes a Viernes: 9:00 - 19:00&#10;Sábados: 10:00 - 14:00&#10;Domingos: Cerrado"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 resize-none"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 resize-none"
             />
+            <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              Nota: Para gestionar horarios detallados por día con apertura/cierre, usa la sección <strong>"Diseña tu Ficha"</strong>.
+            </p>
           </div>
         </div>
 
         {/* Redes sociales y web */}
-        <div className="card-premium p-6">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2">
             <Globe className="w-5 h-5" />
             Presencia digital
@@ -315,7 +408,7 @@ export default function InfoPage() {
                 value={formData.sitioWeb}
                 onChange={(e) => handleChange("sitioWeb", e.target.value)}
                 placeholder="https://mi-optica.com"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
@@ -329,7 +422,7 @@ export default function InfoPage() {
                 value={formData.facebook}
                 onChange={(e) => handleChange("facebook", e.target.value)}
                 placeholder="https://facebook.com/mi-optica"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
 
@@ -343,7 +436,7 @@ export default function InfoPage() {
                 value={formData.instagram}
                 onChange={(e) => handleChange("instagram", e.target.value)}
                 placeholder="https://instagram.com/mi-optica"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-[var(--radius-premium)] focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100"
               />
             </div>
           </div>
@@ -353,14 +446,14 @@ export default function InfoPage() {
         <div className="flex justify-end gap-3 pt-4">
           <button
             onClick={() => router.push(`/dashboard/${opticaId}`)}
-            className="px-6 py-3 text-sm font-medium text-gray-700 border border-gray-300 rounded-[var(--radius-premium)] hover:bg-gray-50 transition-colors"
+            className="px-6 py-3 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleGuardar}
             disabled={guardando}
-            className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white rounded-[var(--radius-premium)] font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white rounded-lg font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {guardando ? (
               <>
