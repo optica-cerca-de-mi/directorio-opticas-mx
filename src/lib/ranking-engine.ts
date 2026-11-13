@@ -379,7 +379,8 @@ function calcularCompletitud(optica: Optica): number {
   if (optica.videoUrl) puntos += 10;
 
   // Horarios completos (15 pts)
-  const horariosCompletos = optica.horarios?.filter((h: any) => !h.cerrado).length ?? 0;
+  const horariosArray2 = Array.isArray(optica.horarios) ? optica.horarios : [];
+const horariosCompletos = horariosArray2.filter((h: any) => !h.cerrado).length;
   puntos += (horariosCompletos / 7) * 15;
 
   // Especialidades (10 pts) - boost si tiene especialidad principal
