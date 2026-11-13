@@ -1571,7 +1571,7 @@ export default function DisenarFicha() {
                   </div>
 
                   <div className="space-y-2">
-                    {optica.horarios?.map((horario, i) => (
+                    {Array.isArray(optica.horarios) && optica.horarios.map((horario, i) => (
                       <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                         <span className="w-24 font-medium text-gray-700">{horario.dia}</span>
                         <label className="flex items-center gap-2 text-sm text-gray-600">
