@@ -420,7 +420,7 @@ export default function DisenarFicha() {
   const [bloqueEditando, setBloqueEditando] = useState<string | null>(null);
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
   
-  // ✅ Estado para especialidades personalizadas
+    // ✅ Estado para especialidades personalizadas
   const [nuevaEspecialidad, setNuevaEspecialidad] = useState("");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -478,7 +478,7 @@ export default function DisenarFicha() {
     updateField("fotos", nuevasFotos);
   }, [optica?.fotos, updateField]);
 
-  // ✅ 3. FUNCIÓN UNIFICADA DE GUARDADO CON GEOCODING (definida ANTES del useEffect)
+  // ✅ 3. FUNCIÓN UNIFICADA DE GUARDADO CON GEOCODING
   const ejecutarGuardado = useCallback(async (datos: any) => {
     let dataToSave = { ...datos };
     const { id, ...rest } = dataToSave;
@@ -512,7 +512,7 @@ export default function DisenarFicha() {
     await updateDoc(docRef, sanitizedData);
   }, [needsGeocoding]);
 
-  // ✅ 4. AUTO-GUARDADO (ahora SÍ puede usar ejecutarGuardado porque ya está definida)
+  // ✅ 4. AUTO-GUARDADO
   useEffect(() => {
     if (!hasChanges || !optica) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -553,9 +553,6 @@ export default function DisenarFicha() {
   };
 
   const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
-
-  const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
-
   const updateField = useCallback((field: keyof OpticaData, value: any) => {
     setOptica(prev => prev ? { ...prev, [field]: value } : null);
     setHasChanges(true);
@@ -617,13 +614,13 @@ export default function DisenarFicha() {
 
 const updateField = ...
 const eliminarFotoGaleria = ...
-const ejecutarGuardado = useCallback(...)   ← definición primero
+const ejecutarGuardado = useCallback(...)
   ...
 }, [needsGeocoding]);
 
 const guardarManual = async () => { ... }
 
-useEffect(() => {                            ← autoguardado AHORA abajo
+useEffect(() => {
   if (!hasChanges || !optica) return;
   ...
 }, [optica, hasChanges, ejecutarGuardado]);
