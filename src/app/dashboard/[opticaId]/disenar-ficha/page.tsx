@@ -420,7 +420,7 @@ export default function DisenarFicha() {
   const [bloqueEditando, setBloqueEditando] = useState<string | null>(null);
   const [draggedBlock, setDraggedBlock] = useState<string | null>(null);
   
-    // ✅ Estado para especialidades personalizadas
+  // ✅ Estado para especialidades personalizadas
   const [nuevaEspecialidad, setNuevaEspecialidad] = useState("");
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -553,6 +553,7 @@ export default function DisenarFicha() {
   };
 
   const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
+
   const updateField = useCallback((field: keyof OpticaData, value: any) => {
     setOptica(prev => prev ? { ...prev, [field]: value } : null);
     setHasChanges(true);
