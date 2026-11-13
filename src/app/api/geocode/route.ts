@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-/**
- * Endpoint de geocoding usando Nominatim (OpenStreetMap)
- * Gratuito, sin API key, con límite de 1 request/segundo.
- */
-
-// Valores que pertenecen al ciclo de vida de la cuenta, NO al estado geográfico
 const ESTADOS_DE_CUENTA = ["activa", "inactivo", "inactiva", "eliminada", "pendiente", "vencido"];
 
-export async function POST(req: NextRequest) {
+async function buscarEnNominatim(
+  query: string
+): Promise<{ lat: number; lng: number; display: string } | null> {
   try {
-    const body = await req.json();
-    const { direccion, ciudad, estado, cp } = body;
-
-    if (!direccion && !ciudad) {
-      return NextResponse.json(
-        { error: 'Se requiere al menos dirección o ciudad' },
-        { status: 400 }
-      );
-    }
-
-    // ✅ Sanitizar: si el estado es un valor de cuenta, ignorarlo en la búsqueda
-    const estadoValido = ESTADOS_DE_CUENTA.includes(String(estado || "").toLowerCase()) ? "" : estado;
-    
-    // Construir query de búsqueda optimizada para México
-    const partes = [direccion, ciudad, estadoValido, cp, 'Mexico'].filter(Boolean);
-    const query = partes.join(', ');
-
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=mx`,
       {
@@ -36,28 +15,76 @@ export async function POST(req: NextRequest) {
         },
       }
     );
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    return {
+      lat: parseFloat(data[0].lat),
+      lng: parseFloat(data[0].lon),
+      display: data[0].display_name,
+    };
+  } catch {
+    return null;
+  }
+}
 
-    if (!response.ok) {
-      throw new Error('Error en Nominatim');
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { direccion, ciudad, estado, cp } = body;
+
+    if (!ciudad && !direccion) {
+      return NextResponse.json(
+        { success: false, error: 'Se requiere al menos dirección o ciudad' },
+        { status: 400 }
+      );
     }
 
-    const data = await response.json();
+    const estadoValido = ESTADOS_DE_CUENTA.includes(String(estado || '').toLowerCase()) ? '' : estado;
 
-    if (data.length === 0) {
+    // Queries en orden de especificidad (de más precisa a más general)
+    const queries: string[] = [];
+    const completa = [direccion, ciudad, estadoValido, cp, 'Mexico'].filter(Boolean).join(', ');
+    if (completa) queries.push(completa);
+
+    const ciudadEstado = [ciudad, estadoValido, 'Mexico'].filter(Boolean).join(', ');
+    if (ciudadEstado && ciudadEstado !== completa) queries.push(ciudadEstado);
+
+    const soloCiudad = [ciudad, 'Mexico'].filter(Boolean).join(', ');
+    if (soloCiudad && soloCiudad !== ciudadEstado) queries.push(soloCiudad);
+
+    const unicas = [...new Set(queries)];
+
+    let resultado = null;
+    let fuente = '';
+
+    for (let i = 0; i < unicas.length; i++) {
+      const r = await buscarEnNominatim(unicas[i]);
+      if (r) {
+        resultado = r;
+        fuente = i === 0 ? 'direccion-exacta' : i === 1 ? 'ciudad-estado' : 'ciudad';
+        break;
+      }
+      if (i < unicas.length - 1) {
+        await new Promise((res) => setTimeout(res, 1100));
+      }
+    }
+
+    if (!resultado) {
       return NextResponse.json({
         success: false,
-        message: 'No se encontraron coordenadas para esta dirección',
+        message: 'No se encontraron coordenadas ni por dirección ni por ciudad',
         latitud: null,
         longitud: null,
       });
     }
 
-    const resultado = data[0];
     return NextResponse.json({
       success: true,
-      latitud: parseFloat(resultado.lat),
-      longitud: parseFloat(resultado.lon),
-      display_name: resultado.display_name,
+      latitud: resultado.lat,
+      longitud: resultado.lng,
+      display_name: resultado.display,
+      fuente,
     });
   } catch (error) {
     console.error('Error en geocoding:', error);

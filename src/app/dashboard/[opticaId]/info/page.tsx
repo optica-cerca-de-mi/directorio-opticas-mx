@@ -12,6 +12,17 @@ import {
 
 const ESTADOS_DE_CUENTA = ["activa", "inactivo", "inactiva", "eliminada", "pendiente", "vencido"];
 
+function extraerCoordenadasDeGoogleMaps(url: string): { lat: number; lng: number } | null {
+  if (!url || typeof url !== "string") return null;
+  const matchAt = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (matchAt) return { lat: parseFloat(matchAt[1]), lng: parseFloat(matchAt[2]) };
+  const matchQ = url.match(/[?&](?:q|query)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (matchQ) return { lat: parseFloat(matchQ[1]), lng: parseFloat(matchQ[2]) };
+  const matchData = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (matchData) return { lat: parseFloat(matchData[1]), lng: parseFloat(matchData[2]) };
+  return null;
+}
+
 export default function InfoPage() {
   const params = useParams();
   const router = useRouter();
@@ -23,6 +34,8 @@ export default function InfoPage() {
   const [error, setError] = useState("");
   const [needsGeocoding, setNeedsGeocoding] = useState(false);
   const [horariosVista, setHorariosVista] = useState<string[]>([]);
+  const [urlGoogleMaps, setUrlGoogleMaps] = useState("");
+  const [geoMensaje, setGeoMensaje] = useState("");
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -57,6 +70,9 @@ export default function InfoPage() {
           const estadoGeo =
             data.estadoGeografico ||
             (ESTADOS_DE_CUENTA.includes(String(data.estado || "").toLowerCase()) ? "" : data.estado || "");
+
+          setUrlGoogleMaps(data.urlGoogleMaps || "");
+
           setFormData({
             nombre: data.nombre || "",
             direccion: data.direccion || "",
@@ -70,8 +86,8 @@ export default function InfoPage() {
             instagram: data.instagram || "",
             descripcion: data.descripcion || "",
             linkAgenda: data.linkAgenda || "",
-            latitud: data.latitud || null,
-            longitud: data.longitud || null,
+            latitud: data.latitud ?? null,
+            longitud: data.longitud ?? null,
           });
         }
       } catch (err) {
@@ -88,6 +104,7 @@ export default function InfoPage() {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (["direccion", "ciudad", "estadoGeografico", "cp"].includes(field)) {
       setNeedsGeocoding(true);
+      setGeoMensaje("");
     }
   };
 
@@ -95,30 +112,50 @@ export default function InfoPage() {
     setGuardando(true);
     setMensaje("");
     setError("");
+    setGeoMensaje("");
     try {
       let dataToSave = { ...formData };
+
       if (needsGeocoding && (formData.direccion || formData.ciudad)) {
-        try {
-          const response = await fetch("/api/geocode", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              direccion: formData.direccion,
-              ciudad: formData.ciudad,
-              estado: formData.estadoGeografico,
-              cp: formData.cp,
-            }),
-          });
-          const geoData = await response.json();
-          if (geoData.success && geoData.latitud && geoData.longitud) {
-            dataToSave.latitud = geoData.latitud;
-            dataToSave.longitud = geoData.longitud;
-            setNeedsGeocoding(false);
+        // PRIORIDAD 1: extraer del link de Google Maps (parseo local, instantáneo)
+        const coordsDeMaps = extraerCoordenadasDeGoogleMaps(urlGoogleMaps);
+        if (coordsDeMaps) {
+          dataToSave.latitud = coordsDeMaps.lat;
+          dataToSave.longitud = coordsDeMaps.lng;
+          setGeoMensaje("Coordenadas extraídas del link de Google Maps.");
+          setNeedsGeocoding(false);
+        } else {
+          // PRIORIDAD 2: endpoint con fallback jerárquico
+          try {
+            const response = await fetch("/api/geocode", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                direccion: formData.direccion,
+                ciudad: formData.ciudad,
+                estado: formData.estadoGeografico,
+                cp: formData.cp,
+              }),
+            });
+            const geoData = await response.json();
+            if (geoData.success && geoData.latitud && geoData.longitud) {
+              dataToSave.latitud = geoData.latitud;
+              dataToSave.longitud = geoData.longitud;
+              setNeedsGeocoding(false);
+              setGeoMensaje(
+                geoData.fuente === "direccion-exacta"
+                  ? "Geocodificado por dirección exacta."
+                  : "Geocodificado de forma aproximada (centro de la ciudad)."
+              );
+            } else {
+              setGeoMensaje("No se pudo geocodificar. Revisa la dirección o pega un link de Google Maps con coordenadas.");
+            }
+          } catch {
+            setGeoMensaje("Error de conexión al geocodificar.");
           }
-        } catch (err) {
-          console.error("Error al geocodificar:", err);
         }
       }
+
       const docRef = doc(db, "opticas", opticaId);
       await setDoc(
         docRef,
@@ -203,9 +240,19 @@ export default function InfoPage() {
                 {needsGeocoding && <span className="text-xs text-amber-600 font-medium">(Se actualizarán al guardar)</span>}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><span className="text-xs text-gray-500">Latitud</span><p className="text-sm font-mono text-navy-900">{formData.latitud ? formData.latitud.toFixed(6) : "No geocodificado"}</p></div>
-                <div><span className="text-xs text-gray-500">Longitud</span><p className="text-sm font-mono text-navy-900">{formData.longitud ? formData.longitud.toFixed(6) : "No geocodificado"}</p></div>
+                <div><span className="text-xs text-gray-500">Latitud</span>
+                  <p className="text-sm font-mono text-navy-900">{formData.latitud !== null ? formData.latitud.toFixed(6) : "No geocodificado"}</p></div>
+                <div><span className="text-xs text-gray-500">Longitud</span>
+                  <p className="text-sm font-mono text-navy-900">{formData.longitud !== null ? formData.longitud.toFixed(6) : "No geocodificado"}</p></div>
               </div>
+              {geoMensaje && (
+                <p className={`text-xs mt-2 font-medium ${geoMensaje.startsWith("No") || geoMensaje.startsWith("Error") ? "text-red-600" : "text-green-700"}`}>
+                  {geoMensaje}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-2">
+                Si la dirección es genérica, el sistema usa el centro de la ciudad como aproximación. Para precisión exacta, pega un link de Google Maps que contenga <span className="font-mono">@lat,lng</span> en la sección Diseña tu Ficha.
+              </p>
             </div>
           </div>
         </div>
@@ -213,8 +260,10 @@ export default function InfoPage() {
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2"><Phone className="w-5 h-5" />Contacto y Agenda</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5">Teléfono</label><input type="tel" value={formData.telefono} onChange={(e) => handleChange("telefono", e.target.value)} placeholder="5551234567" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5">WhatsApp</label><input type="tel" value={formData.whatsapp} onChange={(e) => handleChange("whatsapp", e.target.value)} placeholder="5551234567" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5">Teléfono</label>
+              <input type="tel" value={formData.telefono} onChange={(e) => handleChange("telefono", e.target.value)} placeholder="5551234567" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5">WhatsApp</label>
+              <input type="tel" value={formData.whatsapp} onChange={(e) => handleChange("whatsapp", e.target.value)} placeholder="5551234567" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2"><Calendar className="w-4 h-4 text-navy-700" />Link de Agenda Externa (Opcional)</label>
               <input type="url" value={formData.linkAgenda} onChange={(e) => handleChange("linkAgenda", e.target.value)} placeholder="https://calendly.com/tu-optica o https://doctoralia.com.mx/..." className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" />
@@ -239,9 +288,12 @@ export default function InfoPage() {
         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <h2 className="text-lg font-bold text-navy-900 mb-4 flex items-center gap-2"><Globe className="w-5 h-5" />Presencia digital</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1"><Globe className="w-4 h-4" />Sitio web</label><input type="url" value={formData.sitioWeb} onChange={(e) => handleChange("sitioWeb", e.target.value)} placeholder="https://mi-optica.com" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1"><Share2 className="w-4 h-4" />Facebook</label><input type="url" value={formData.facebook} onChange={(e) => handleChange("facebook", e.target.value)} placeholder="https://facebook.com/mi-optica" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1"><Camera className="w-4 h-4" />Instagram</label><input type="url" value={formData.instagram} onChange={(e) => handleChange("instagram", e.target.value)} placeholder="https://instagram.com/mi-optica" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1"><Globe className="w-4 h-4" />Sitio web</label>
+              <input type="url" value={formData.sitioWeb} onChange={(e) => handleChange("sitioWeb", e.target.value)} placeholder="https://mi-optica.com" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1"><Share2 className="w-4 h-4" />Facebook</label>
+              <input type="url" value={formData.facebook} onChange={(e) => handleChange("facebook", e.target.value)} placeholder="https://facebook.com/mi-optica" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1"><Camera className="w-4 h-4" />Instagram</label>
+              <input type="url" value={formData.instagram} onChange={(e) => handleChange("instagram", e.target.value)} placeholder="https://instagram.com/mi-optica" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100" /></div>
           </div>
         </div>
 
