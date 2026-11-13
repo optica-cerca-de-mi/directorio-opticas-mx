@@ -1835,7 +1835,7 @@ export default function DisenarFicha() {
                 {seccionActiva === "horarios" && (
                   <div>
                     <p className="text-sm text-gray-600 mb-2">Horarios</p>
-                    {optica.horarios?.slice(0, 3).map((h, i) => (
+                    {Array.isArray(optica.horarios) && optica.horarios.slice(0, 3).map((h, i) => (
                       <p key={i} className="text-xs text-gray-600">{h.dia}: {h.cerrado ? "Cerrado" : `${h.apertura} - ${h.cierre}`}</p>
                     ))}
                   </div>

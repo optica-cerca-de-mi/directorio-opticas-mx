@@ -750,7 +750,7 @@ export default function FichaOptica() {
                   <Calendar className="w-5 h-5" /> Horarios de atención
                 </h3>
                 <div className="space-y-2">
-                  {optica.horarios.map((horario, i) => {
+                  {Array.isArray(optica.horarios) && optica.horarios.map((horario, i) => {
                     const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
                     const esHoy = diasSemana[new Date().getDay()] === horario.dia;
                     return (
