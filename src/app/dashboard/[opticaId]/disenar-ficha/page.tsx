@@ -422,9 +422,12 @@ export default function DisenarFicha() {
   
   // ✅ Estado para especialidades personalizadas
   const [nuevaEspecialidad, setNuevaEspecialidad] = useState("");
-
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ✅ 1. ESTADO PARA GEOCODING
+  const [needsGeocoding, setNeedsGeocoding] = useState(false);
+
+  // Carga inicial de datos
   useEffect(() => {
     const cargarDatos = async () => {
       if (!params.opticaId) return;
@@ -453,7 +456,103 @@ export default function DisenarFicha() {
     cargarDatos();
   }, [params.opticaId, router]);
 
+  // ✅ 2. FUNCIÓN updateField (con detección de cambios de ubicación)
+  const updateField = useCallback((field: keyof OpticaData, value: any) => {
+    setOptica(prev => prev ? { ...prev, [field]: value } : null);
+    setHasChanges(true);
+    
+    if (['direccion', 'ciudad', 'estado', 'cp'].includes(field)) {
+      setNeedsGeocoding(true);
+    }
+  }, []);
+
+  const eliminarFotoGaleria = useCallback(async (index: number) => {
+    const fotoAEliminar = optica?.fotos?.[index];
+    const publicId = getFotoPublicId(fotoAEliminar);
+
+    if (publicId) {
+      await deleteImageFromCloudinary(publicId);
+    }
+
+    const nuevasFotos = optica?.fotos?.filter((_, i) => i !== index);
+    updateField("fotos", nuevasFotos);
+  }, [optica?.fotos, updateField]);
+
+  // ✅ 3. FUNCIÓN UNIFICADA DE GUARDADO CON GEOCODING (definida ANTES del useEffect)
+  const ejecutarGuardado = useCallback(async (datos: any) => {
+    let dataToSave = { ...datos };
+    const { id, ...rest } = dataToSave;
+
+    if (needsGeocoding && (rest.direccion || rest.ciudad)) {
+      try {
+        const response = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            direccion: rest.direccion,
+            ciudad: rest.ciudad,
+            estado: rest.estado,
+            cp: rest.cp
+          })
+        });
+        const geoData = await response.json();
+        
+        if (geoData.success && geoData.latitud && geoData.longitud) {
+          rest.latitud = geoData.latitud;
+          rest.longitud = geoData.longitud;
+          setNeedsGeocoding(false);
+        }
+      } catch (error) {
+        console.error("Error al geocodificar:", error);
+      }
+    }
+
+    const docRef = doc(db, "opticas", datos.id);
+    const sanitizedData = sanitizeForFirebase(rest);
+    await updateDoc(docRef, sanitizedData);
+  }, [needsGeocoding]);
+
+  // ✅ 4. AUTO-GUARDADO (ahora SÍ puede usar ejecutarGuardado porque ya está definida)
   useEffect(() => {
+    if (!hasChanges || !optica) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
+    setSaveStatus("saving");
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await ejecutarGuardado(optica);
+        setSaveStatus("saved");
+        setHasChanges(false);
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } catch (error: any) {
+        console.error("❌ Error al guardar:", error);
+        setSaveStatus("error");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      }
+    }, 2500);
+
+    return () => { 
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); 
+    };
+  }, [optica, hasChanges, ejecutarGuardado]);
+
+  // ✅ 5. GUARDADO MANUAL
+  const guardarManual = async () => {
+    if (!optica) return;
+    try {
+      setSaveStatus("saving");
+      await ejecutarGuardado(optica);
+      setSaveStatus("saved");
+      setHasChanges(false);
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch (error) {
+      console.error("❌ Error al guardar:", error);
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 3000);
+    }
+  };
+
+  const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
 
   const planConfig = optica?.plan ? getPlanConfig(optica.plan as PlanType) : null;
 
