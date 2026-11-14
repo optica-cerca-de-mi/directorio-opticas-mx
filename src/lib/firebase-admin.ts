@@ -1,6 +1,5 @@
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
 
 function ensureAdminInitialized(): boolean {
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -17,7 +16,6 @@ function ensureAdminInitialized(): boolean {
   if (getApps().length > 0) return true;
 
   try {
-    // Normalizar saltos de línea: si la clave viene con \n literales (formato Vercel), convertirlos a reales
     const privateKey = rawKey.includes("\\n") ? rawKey.replace(/\\n/g, "\n") : rawKey;
 
     initializeApp({
@@ -38,5 +36,6 @@ function ensureAdminInitialized(): boolean {
 
 const initialized = ensureAdminInitialized();
 
+// Solo Firestore. Se elimina getAuth/auth para evitar el crash de
+// jose/jwks-rsa (ESM) al cargar firebase-admin/auth en el runtime de Vercel.
 export const db = initialized ? getFirestore() : null;
-export const auth = initialized ? getAuth() : null;
