@@ -104,6 +104,7 @@ export default function PlanPage() {
             opticaId: opticaId,
             userEmail: currentUser.email,
             userId: currentUser.uid,
+            billingCycle: billingCycle, // ✅ AÑADIDO: Ahora sí envía el ciclo de facturación al backend
           }),
         });
 

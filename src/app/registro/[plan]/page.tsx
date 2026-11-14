@@ -234,12 +234,15 @@ export default function WizardRegistro() {
       const respuesta = await fetch("/api/crear-optica", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          formData: formData,
-        }),
-      });
+body: JSON.stringify({
+  plan: nuevoPlan,
+  opticaId: opticaId,
+  userEmail: currentUser.email,
+  userId: currentUser.uid,
+  billingCycle: billingCycle,
+  incluirPoliza: formData.aceptaPoliza,
+  polizaBillingCycle: formData.polizaBillingCycle,
+}),
 
       const datos = await respuesta.json();
 
@@ -1087,7 +1090,7 @@ export default function WizardRegistro() {
                                 </div>
                                 <div className="bg-navy-800 rounded p-2 text-xs">
                                   <p className="text-gray-300">
-                                    Pagando anual ahorras <span className="font-bold text-white">${ahorroAnual}</span>
+                                    Pagando anual ahorras <span className="font-bold text-white">${(precioPlanMensual * 12) - precioPlanAnual}</span>
                                   </p>
                                 </div>
                               </div>
