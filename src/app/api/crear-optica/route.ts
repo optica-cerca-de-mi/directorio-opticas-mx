@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, auth } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
+
     // 2. Contar cuántas ópticas tiene ya este usuario
     const opticasSnapshot = await db.collection("opticas").where("uid", "==", uid).get();
     const numOpticas = opticasSnapshot.size;
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Preparar datos de la óptica
-    const opticaId = crypto.randomUUID(); // ID único para la óptica (permite múltiples por usuario)
+    const opticaId = crypto.randomUUID(); // ID único para la óptica
     const slug = `${formData.nombre.toLowerCase().replace(/\s+/g, "-")}-${opticaId.slice(0, 6)}`;
     
     const diasDePlan = formData.billingCycle === "yearly" ? 365 : 30;
@@ -81,21 +83,22 @@ export async function POST(req: NextRequest) {
       videoUrl: formData.videoUrl,
       plan: formData.planSeleccionado,
       billingCycle: formData.billingCycle,
-      polizaActiva: formData.aceptaPoliza,
+      polizaActiva: formData.aceptaPoliza || false,
       polizaBillingCycle: formData.aceptaPoliza ? formData.polizaBillingCycle : null,
       polizaVencimiento: polizaVencimiento ? polizaVencimiento.toISOString() : null,
-      fechaCreacion: admin.firestore.FieldValue.serverTimestamp(),
+      fechaCreacion: FieldValue.serverTimestamp(), // ✅ CORREGIDO
       fechaVencimiento: fechaVencimiento.toISOString(),
       estado: "activa",
       email: email,
       consentimientoTerminos: true,
-      fechaConsentimiento: admin.firestore.FieldValue.serverTimestamp(),
+      fechaConsentimiento: FieldValue.serverTimestamp(), // ✅ CORREGIDO
     });
 
     return NextResponse.json({ success: true, opticaId });
 
   } catch (error: any) {
-    console.error("Error en API crear-optica:", error);
+    console.error("❌ Error en API crear-optica:", error);
     return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 });
+    // Nota: Si el error persiste, este console.error ahora mostrará la causa exacta en los logs de Vercel.
   }
 }
