@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase-admin";
 
+// Limpia comillas simples o dobles al inicio/final y espacios.
+// Protege contra errores de pegado en Vercel (valores con comillas literales).
+function limpiarEnv(valor?: string): string | undefined {
+  if (!valor) return valor;
+  return valor.replace(/^["']|["']$/g, "").trim();
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { uid, email, idToken, formData } = await req.json();
@@ -15,16 +22,25 @@ export async function POST(req: NextRequest) {
 
     // 2. Verificar autenticación vía REST de Google (sin firebase-admin/auth,
     //    para evitar el crash de jose/jwks-rsa en el runtime de Vercel).
+    const projectId = limpiarEnv(process.env.FIREBASE_PROJECT_ID);
+
     console.log("🔐 [AUTH] idToken presente:", !!idToken, "| longitud:", idToken ? idToken.length : 0);
     console.log("🔐 [AUTH] uid recibido:", uid);
-    console.log("🔐 [AUTH] FIREBASE_PROJECT_ID env:", process.env.FIREBASE_PROJECT_ID);
+    console.log("🔐 [AUTH] FIREBASE_PROJECT_ID limpio:", projectId);
 
     if (!idToken) {
       console.log("🔐 [AUTH] FALLA: no llegó idToken en el body");
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const projectId = process.env.FIREBASE_PROJECT_ID;
+    if (!projectId) {
+      console.log("🔐 [AUTH] FALLA: FIREBASE_PROJECT_ID no está configurado");
+      return NextResponse.json(
+        { error: "Error interno: falta FIREBASE_PROJECT_ID." },
+        { status: 500 }
+      );
+    }
+
     let claims: any = null;
     try {
       const verifyRes = await fetch(
@@ -32,7 +48,9 @@ export async function POST(req: NextRequest) {
       );
       console.log("🔐 [AUTH] tokeninfo status:", verifyRes.status);
       if (!verifyRes.ok) {
-        console.log("🔐 [AUTH] FALLA: tokeninfo devolvió", verifyRes.status);
+        // Capturamos el cuerpo del error para ver la causa exacta del 400
+        const errBody = await verifyRes.text();
+        console.log("🔐 [AUTH] FALLA: tokeninfo devolvió", verifyRes.status, "| cuerpo:", errBody);
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
       }
       claims = await verifyRes.json();
