@@ -1,76 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase-admin";
-
-// Limpia comillas simples o dobles al inicio/final y espacios.
-// Protege contra errores de pegado en Vercel (valores con comillas literales).
-function limpiarEnv(valor?: string): string | undefined {
-  if (!valor) return valor;
-  return valor.replace(/^["']|["']$/g, "").trim();
-}
+import { db, auth } from "@/lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
     const { uid, email, idToken, formData } = await req.json();
 
-    // 1. Verificar que Firestore Admin esté disponible
-    if (!db) {
+    // 1. Verificar que Firebase Admin esté disponible
+    if (!db || !auth) {
       return NextResponse.json(
         { error: "Error interno: Firebase Admin no está inicializado en el servidor." },
         { status: 500 }
       );
     }
 
-    // 2. Verificar autenticación vía REST de Google (sin firebase-admin/auth,
-    //    para evitar el crash de jose/jwks-rsa en el runtime de Vercel).
-    const projectId = limpiarEnv(process.env.FIREBASE_PROJECT_ID);
-
-    console.log("🔐 [AUTH] idToken presente:", !!idToken, "| longitud:", idToken ? idToken.length : 0);
-    console.log("🔐 [AUTH] uid recibido:", uid);
-    console.log("🔐 [AUTH] FIREBASE_PROJECT_ID limpio:", projectId);
-
+    // 2. Verificar autenticación con la API oficial de Firebase Admin.
+    //    verifyIdToken valida firma, audiencia (projectId) y expiración.
     if (!idToken) {
-      console.log("🔐 [AUTH] FALLA: no llegó idToken en el body");
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    if (!projectId) {
-      console.log("🔐 [AUTH] FALLA: FIREBASE_PROJECT_ID no está configurado");
-      return NextResponse.json(
-        { error: "Error interno: falta FIREBASE_PROJECT_ID." },
-        { status: 500 }
-      );
-    }
-
-    let claims: any = null;
+    let decoded: any;
     try {
-      const verifyRes = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
-      );
-      console.log("🔐 [AUTH] tokeninfo status:", verifyRes.status);
-      if (!verifyRes.ok) {
-        // Capturamos el cuerpo del error para ver la causa exacta del 400
-        const errBody = await verifyRes.text();
-        console.log("🔐 [AUTH] FALLA: tokeninfo devolvió", verifyRes.status, "| cuerpo:", errBody);
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-      }
-      claims = await verifyRes.json();
+      decoded = await auth.verifyIdToken(idToken, true);
     } catch (e: any) {
-      console.log("🔐 [AUTH] FALLA: fetch a tokeninfo lanzó:", e.message);
+      console.error("🔐 verifyIdToken falló:", e?.message);
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Validar que el token corresponde a este proyecto y a este uid
-    const expectedIss = `https://securetoken.google.com/${projectId}`;
-    console.log("🔐 [AUTH] claims.iss:", claims?.iss, "| esperado:", expectedIss);
-    console.log("🔐 [AUTH] claims.aud:", claims?.aud, "| esperado:", projectId);
-    console.log("🔐 [AUTH] claims.sub:", claims?.sub, "| uid:", uid);
-
-    if (!claims || claims.iss !== expectedIss || claims.aud !== projectId || claims.sub !== uid) {
-      console.log("🔐 [AUTH] FALLA: discrepancia en iss/aud/sub");
+    if (!decoded || decoded.uid !== uid) {
+      console.error("🔐 uid del token no coincide con el enviado:", decoded?.uid, "vs", uid);
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    console.log("🔐 [AUTH] ✅ Verificación de token exitosa");
+    console.log("🔐 ✅ Verificación de token exitosa");
 
     // 3. Contar cuántas ópticas tiene ya este usuario
     const opticasSnapshot = await db.collection("opticas").where("uid", "==", uid).get();

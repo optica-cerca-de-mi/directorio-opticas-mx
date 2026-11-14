@@ -1,9 +1,16 @@
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
+
+// Limpia comillas simples o dobles al inicio/final y espacios.
+function limpiarEnv(valor?: string): string | undefined {
+  if (!valor) return valor;
+  return valor.replace(/^["']|["']$/g, "").trim();
+}
 
 function ensureAdminInitialized(): boolean {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = limpiarEnv(process.env.FIREBASE_PROJECT_ID);
+  const clientEmail = limpiarEnv(process.env.FIREBASE_CLIENT_EMAIL);
   const rawKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !rawKey) {
@@ -36,7 +43,5 @@ function ensureAdminInitialized(): boolean {
 
 const initialized = ensureAdminInitialized();
 
-// Solo Firestore. Se eliminó getAuth/auth: ningún endpoint lo consume,
-// y su carga arrastraba firebase-admin/auth -> jwks-rsa -> jose (ESM),
-// provocando ERR_REQUIRE_ESM en el runtime de Vercel.
 export const db = initialized ? getFirestore() : null;
+export const auth = initialized ? getAuth() : null;
