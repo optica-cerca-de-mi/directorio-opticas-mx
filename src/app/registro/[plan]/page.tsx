@@ -206,7 +206,7 @@ export default function WizardRegistro() {
     }
   };
 
-  // ✅ FUNCIÓN CORREGIDA: crea la óptica y, si es plan de pago, encadena el cobro en Stripe
+  // ✅ FUNCIÓN CORREGIDA: incluye 'async' y encadena el checkout si es plan de pago
   const publicarFicha = async () => {
     if (!formData.aceptaTerminos) {
       alert("Para continuar, es obligatorio aceptar los Términos y Condiciones y el Aviso de Privacidad.");
@@ -285,45 +285,6 @@ export default function WizardRegistro() {
 
       // Paso C: plan Free, directo al dashboard
       router.push(`/dashboard/${opticaId}`);
-
-    } catch (error: any) {
-      console.error("Error al publicar la ficha:", error);
-      alert(`Error: ${error.message}`);
-    } finally {
-      setPublicando(false);
-    }
-  };
-
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      alert("Debes iniciar sesión para registrar una óptica.");
-      router.push("/login?redirect=/registro/" + formData.planSeleccionado);
-      return;
-    }
-
-    setPublicando(true);
-
-    try {
-      const idToken = await currentUser.getIdToken();
-
-      const respuesta = await fetch("/api/crear-optica", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          idToken: idToken,
-          formData: formData,
-        }),
-      });
-
-      const datos = await respuesta.json();
-
-      if (!respuesta.ok) {
-        throw new Error(datos.error || "Error al crear la óptica");
-      }
-
-      router.push(`/dashboard/${datos.opticaId}`);
 
     } catch (error: any) {
       console.error("Error al publicar la ficha:", error);
