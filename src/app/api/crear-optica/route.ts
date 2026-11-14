@@ -15,7 +15,12 @@ export async function POST(req: NextRequest) {
 
     // 2. Verificar autenticación vía REST de Google (sin firebase-admin/auth,
     //    para evitar el crash de jose/jwks-rsa en el runtime de Vercel).
+    console.log("🔐 [AUTH] idToken presente:", !!idToken, "| longitud:", idToken ? idToken.length : 0);
+    console.log("🔐 [AUTH] uid recibido:", uid);
+    console.log("🔐 [AUTH] FIREBASE_PROJECT_ID env:", process.env.FIREBASE_PROJECT_ID);
+
     if (!idToken) {
+      console.log("🔐 [AUTH] FALLA: no llegó idToken en el body");
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
@@ -25,19 +30,29 @@ export async function POST(req: NextRequest) {
       const verifyRes = await fetch(
         `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
       );
+      console.log("🔐 [AUTH] tokeninfo status:", verifyRes.status);
       if (!verifyRes.ok) {
+        console.log("🔐 [AUTH] FALLA: tokeninfo devolvió", verifyRes.status);
         return NextResponse.json({ error: "No autorizado" }, { status: 401 });
       }
       claims = await verifyRes.json();
-    } catch {
+    } catch (e: any) {
+      console.log("🔐 [AUTH] FALLA: fetch a tokeninfo lanzó:", e.message);
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     // Validar que el token corresponde a este proyecto y a este uid
     const expectedIss = `https://securetoken.google.com/${projectId}`;
+    console.log("🔐 [AUTH] claims.iss:", claims?.iss, "| esperado:", expectedIss);
+    console.log("🔐 [AUTH] claims.aud:", claims?.aud, "| esperado:", projectId);
+    console.log("🔐 [AUTH] claims.sub:", claims?.sub, "| uid:", uid);
+
     if (!claims || claims.iss !== expectedIss || claims.aud !== projectId || claims.sub !== uid) {
+      console.log("🔐 [AUTH] FALLA: discrepancia en iss/aud/sub");
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
+
+    console.log("🔐 [AUTH] ✅ Verificación de token exitosa");
 
     // 3. Contar cuántas ópticas tiene ya este usuario
     const opticasSnapshot = await db.collection("opticas").where("uid", "==", uid).get();
