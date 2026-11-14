@@ -206,7 +206,7 @@ export default function WizardRegistro() {
     }
   };
 
-  // ✅ FUNCIÓN CORREGIDA: Usa el endpoint seguro del backend
+  // ✅ FUNCIÓN CORREGIDA: Incluye poliza en el payload y sintaxis perfecta
   const publicarFicha = async () => {
     if (!formData.aceptaTerminos) {
       alert("⚠️ Para continuar, es OBLIGATORIO aceptar los Términos y Condiciones y el Aviso de Privacidad.");
@@ -234,15 +234,14 @@ export default function WizardRegistro() {
       const respuesta = await fetch("/api/crear-optica", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-body: JSON.stringify({
-  plan: nuevoPlan,
-  opticaId: opticaId,
-  userEmail: currentUser.email,
-  userId: currentUser.uid,
-  billingCycle: billingCycle,
-  incluirPoliza: formData.aceptaPoliza,
-  polizaBillingCycle: formData.polizaBillingCycle,
-}),
+        body: JSON.stringify({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          formData: formData,
+          incluirPoliza: formData.aceptaPoliza,
+          polizaBillingCycle: formData.polizaBillingCycle,
+        }),
+      });
 
       const datos = await respuesta.json();
 
