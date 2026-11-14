@@ -206,7 +206,7 @@ export default function WizardRegistro() {
     }
   };
 
-  // ✅ FUNCIÓN CORREGIDA: Incluye poliza en el payload y sintaxis perfecta
+  // ✅ FUNCIÓN CORREGIDA: envía idToken para verificación por REST (sin firebase-admin/auth)
   const publicarFicha = async () => {
     if (!formData.aceptaTerminos) {
       alert("⚠️ Para continuar, es OBLIGATORIO aceptar los Términos y Condiciones y el Aviso de Privacidad.");
@@ -231,15 +231,16 @@ export default function WizardRegistro() {
     setPublicando(true);
 
     try {
+      const idToken = await currentUser.getIdToken();
+
       const respuesta = await fetch("/api/crear-optica", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           uid: currentUser.uid,
           email: currentUser.email,
+          idToken: idToken,
           formData: formData,
-          incluirPoliza: formData.aceptaPoliza,
-          polizaBillingCycle: formData.polizaBillingCycle,
         }),
       });
 
@@ -250,7 +251,7 @@ export default function WizardRegistro() {
       }
 
       router.push(`/dashboard/${datos.opticaId}`);
-      
+
     } catch (error: any) {
       console.error("Error al publicar la ficha:", error);
       alert(`Error: ${error.message}`);

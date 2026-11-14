@@ -1,22 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, auth } from "@/lib/firebase-admin";
+import { db } from "@/lib/firebase-admin";
 
 export async function POST(req: NextRequest) {
   try {
-    const { uid, email, formData } = await req.json();
+    const { uid, email, idToken, formData } = await req.json();
 
-    // 1. Verificar que Firebase Admin esté disponible en el servidor
-    if (!auth || !db) {
+    // 1. Verificar que Firestore Admin esté disponible
+    if (!db) {
       return NextResponse.json(
         { error: "Error interno: Firebase Admin no está inicializado en el servidor." },
         { status: 500 }
       );
     }
 
-    // 2. Verificar que el usuario exista y esté autenticado
+    // 2. Verificar autenticación vía REST de Google (sin firebase-admin/auth,
+    //    para evitar el crash de jose/jwks-rsa en el runtime de Vercel).
+    if (!idToken) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    let claims: any = null;
     try {
-      await auth.getUser(uid);
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
+      );
+      if (!verifyRes.ok) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      }
+      claims = await verifyRes.json();
     } catch {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // Validar que el token corresponde a este proyecto y a este uid
+    const expectedIss = `https://securetoken.google.com/${projectId}`;
+    if (!claims || claims.iss !== expectedIss || claims.aud !== projectId || claims.sub !== uid) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
@@ -70,6 +89,7 @@ export async function POST(req: NextRequest) {
       nombre: formData.nombre,
       direccion: formData.direccion,
       ciudad: formData.ciudad,
+      estado: formData.estado,
       telefono: formData.telefono,
       googleMapsLink: formData.googleMapsLink,
       horarios: formData.horarios,
@@ -89,7 +109,7 @@ export async function POST(req: NextRequest) {
       polizaVencimiento: polizaVencimiento ? polizaVencimiento.toISOString() : null,
       fechaCreacion: ahoraISO,
       fechaVencimiento: fechaVencimiento.toISOString(),
-      estado: "activa",
+      estadoCuenta: "activa",
       email: email,
       consentimientoTerminos: true,
       fechaConsentimiento: ahoraISO,
