@@ -1150,58 +1150,58 @@ export default function WizardRegistro() {
                       </span>
                     </label>
                   </div>
-
-                  {/* Navegación del wizard */}
-                  <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-                    {pasoActual > 1 ? (
-                      <button
-                        onClick={pasoAnterior}
-                        className="btn-secondary text-sm gap-2"
-                      >
-                        <ArrowLeft className="w-4 h-4" />
-                        Anterior
-                      </button>
-                    ) : (
-                      <div></div>
-                    )}
-
-                    {pasoActual < totalPasos ? (
-                      <button
-                        onClick={siguientePaso}
-                        disabled={!puedeAvanzar()}
-                        className={`btn-primary text-sm gap-2 ${
-                          !puedeAvanzar() ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      >
-                        Siguiente
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={publicarFicha}
-                        disabled={publicando || !formData.aceptaTerminos}
-                        className={`btn-primary bg-gold-500 hover:bg-gold-400 text-white text-sm gap-2 transition-all ${
-                          publicando || !formData.aceptaTerminos 
-                            ? "opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400" 
-                            : "shadow-lg hover:shadow-xl"
-                        }`}
-                      >
-                        {publicando ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Creando cuenta y publicando...
-                          </>
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4" />
-                            Publicar mi ficha
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
                 </div>
               )}
+
+              {/* Navegación del wizard (SIEMPRE VISIBLE, fuera de los pasos) */}
+              <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+                {pasoActual > 1 ? (
+                  <button
+                    onClick={pasoAnterior}
+                    className="btn-secondary text-sm gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Anterior
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+
+                {pasoActual < totalPasos ? (
+                  <button
+                    onClick={siguientePaso}
+                    disabled={!puedeAvanzar()}
+                    className={`btn-primary text-sm gap-2 ${
+                      !puedeAvanzar() ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    Siguiente
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={publicarFicha}
+                    disabled={publicando || !formData.aceptaTerminos}
+                    className={`btn-primary bg-gold-500 hover:bg-gold-400 text-white text-sm gap-2 transition-all ${
+                      publicando || !formData.aceptaTerminos 
+                        ? "opacity-50 cursor-not-allowed bg-gray-400 hover:bg-gray-400" 
+                        : "shadow-lg hover:shadow-xl"
+                    }`}
+                  >
+                    {publicando ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creando cuenta y publicando...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Publicar mi ficha
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
