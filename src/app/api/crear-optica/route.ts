@@ -6,12 +6,18 @@ export async function POST(req: NextRequest) {
     const { uid, email, formData } = await req.json();
 
     // 1. Verificar que el usuario exista y esté autenticado
+    if (!auth) {
+      return NextResponse.json(
+        { error: "Error interno: Firebase Admin no está inicializado en el servidor." },
+        { status: 500 }
+      );
+    }
+
     try {
       await auth.getUser(uid);
     } catch {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-
     // 2. Contar cuántas ópticas tiene ya este usuario
     const opticasSnapshot = await db.collection("opticas").where("uid", "==", uid).get();
     const numOpticas = opticasSnapshot.size;
