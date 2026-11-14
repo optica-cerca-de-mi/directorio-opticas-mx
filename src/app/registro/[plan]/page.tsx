@@ -206,10 +206,10 @@ export default function WizardRegistro() {
     }
   };
 
-  // ✅ FUNCIÓN CORREGIDA: envía idToken para verificación por REST (sin firebase-admin/auth)
+  // ✅ FUNCIÓN CORREGIDA: crea la óptica y, si es plan de pago, encadena el cobro en Stripe
   const publicarFicha = async () => {
     if (!formData.aceptaTerminos) {
-      alert("⚠️ Para continuar, es OBLIGATORIO aceptar los Términos y Condiciones y el Aviso de Privacidad.");
+      alert("Para continuar, es obligatorio aceptar los Términos y Condiciones y el Aviso de Privacidad.");
       const checkboxElement = document.getElementById("checkbox-terminos");
       if (checkboxElement) {
         checkboxElement.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -220,6 +220,79 @@ export default function WizardRegistro() {
       }
       return;
     }
+
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      alert("Debes iniciar sesión para registrar una óptica.");
+      router.push("/login?redirect=/registro/" + formData.planSeleccionado);
+      return;
+    }
+
+    setPublicando(true);
+
+    try {
+      const idToken = await currentUser.getIdToken();
+
+      // Paso A: crear la óptica (queda pendiente_pago si el plan es de pago)
+      const respuesta = await fetch("/api/crear-optica", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: currentUser.uid,
+          email: currentUser.email,
+          idToken: idToken,
+          formData: formData,
+        }),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        throw new Error(datos.error || "Error al crear la óptica");
+      }
+
+      const opticaId = datos.opticaId;
+
+      // Paso B: si requiere pago, lanzar el checkout de Stripe con ese opticaId
+      if (datos.requierePago) {
+        const checkoutResp = await fetch("/api/checkout/stripe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            plan: formData.planSeleccionado,
+            opticaId: opticaId,
+            userEmail: currentUser.email,
+            userId: currentUser.uid,
+            billingCycle: formData.billingCycle,
+            incluirPoliza: formData.aceptaPoliza,
+            polizaBillingCycle: formData.polizaBillingCycle,
+          }),
+        });
+
+        const checkoutData = await checkoutResp.json();
+
+        if (!checkoutResp.ok) {
+          throw new Error(checkoutData.error || "Error al iniciar el pago");
+        }
+
+        if (checkoutData.url) {
+          window.location.href = checkoutData.url;
+          return;
+        } else {
+          throw new Error("No se recibió la URL de checkout");
+        }
+      }
+
+      // Paso C: plan Free, directo al dashboard
+      router.push(`/dashboard/${opticaId}`);
+
+    } catch (error: any) {
+      console.error("Error al publicar la ficha:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setPublicando(false);
+    }
+  };
 
     const currentUser = auth.currentUser;
     if (!currentUser) {

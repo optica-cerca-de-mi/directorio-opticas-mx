@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Verificar autenticación con la API oficial de Firebase Admin.
-    //    verifyIdToken valida firma, audiencia (projectId) y expiración.
     if (!idToken) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!decoded || decoded.uid !== uid) {
-      console.error("🔐 uid del token no coincide con el enviado:", decoded?.uid, "vs", uid);
+      console.error("🔐 uid del token no coincide:", decoded?.uid, "vs", uid);
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
@@ -63,21 +62,11 @@ export async function POST(req: NextRequest) {
     // 7. Preparar datos de la óptica
     const opticaId = crypto.randomUUID();
     const slug = `${formData.nombre.toLowerCase().replace(/\s+/g, "-")}-${opticaId.slice(0, 6)}`;
-
-    const diasDePlan = formData.billingCycle === "yearly" ? 365 : 30;
-    const fechaVencimiento = new Date();
-    fechaVencimiento.setDate(fechaVencimiento.getDate() + diasDePlan);
-
-    let polizaVencimiento = null;
-    if (formData.aceptaPoliza) {
-      const diasPoliza = formData.polizaBillingCycle === "yearly" ? 365 : 30;
-      polizaVencimiento = new Date();
-      polizaVencimiento.setDate(polizaVencimiento.getDate() + diasPoliza);
-    }
+    const esPlanDePago = formData.planSeleccionado !== "free";
 
     const ahoraISO = new Date().toISOString();
 
-    // 8. Guardar en Firestore de forma segura
+    // 8. Guardar en Firestore. Si es plan de pago queda pendiente hasta que Stripe confirme.
     await db.collection("opticas").doc(opticaId).set({
       uid: uid,
       slug: slug,
@@ -99,18 +88,19 @@ export async function POST(req: NextRequest) {
       videoUrl: formData.videoUrl,
       plan: formData.planSeleccionado,
       billingCycle: formData.billingCycle,
-      polizaActiva: formData.aceptaPoliza || false,
-      polizaBillingCycle: formData.aceptaPoliza ? formData.polizaBillingCycle : null,
-      polizaVencimiento: polizaVencimiento ? polizaVencimiento.toISOString() : null,
+      polizaActiva: false,
+      polizaBillingCycle: null,
+      polizaVencimiento: null,
       fechaCreacion: ahoraISO,
-      fechaVencimiento: fechaVencimiento.toISOString(),
-      estadoCuenta: "activa",
+      fechaVencimiento: null,
+      estadoCuenta: esPlanDePago ? "pendiente_pago" : "activa",
+      pagoConfirmado: !esPlanDePago,
       email: email,
       consentimientoTerminos: true,
       fechaConsentimiento: ahoraISO,
     });
 
-    return NextResponse.json({ success: true, opticaId });
+    return NextResponse.json({ success: true, opticaId, requierePago: esPlanDePago });
 
   } catch (error: any) {
     console.error("Error en API crear-optica:", error);
