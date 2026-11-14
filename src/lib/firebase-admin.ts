@@ -36,6 +36,7 @@ function ensureAdminInitialized(): boolean {
 
 const initialized = ensureAdminInitialized();
 
-// Solo Firestore. Se elimina getAuth/auth para evitar el crash de
-// jose/jwks-rsa (ESM) al cargar firebase-admin/auth en el runtime de Vercel.
+// Solo Firestore. Se eliminó getAuth/auth: ningún endpoint lo consume,
+// y su carga arrastraba firebase-admin/auth -> jwks-rsa -> jose (ESM),
+// provocando ERR_REQUIRE_ESM en el runtime de Vercel.
 export const db = initialized ? getFirestore() : null;
