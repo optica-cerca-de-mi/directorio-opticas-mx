@@ -24,7 +24,7 @@ import BarChart from "@/components/dashboard/BarChart";
 export default function DashboardHome() {
   const params = useParams();
   const opticaId = params.opticaId as string;
-  
+
   // Estado de la óptica
   const [optica, setOptica] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
@@ -47,7 +47,7 @@ export default function DashboardHome() {
           setOptica({ id: docSnap.id, ...data });
 
           const planActual = data.plan || "free";
-          
+
           // Cargar todas las métricas en paralelo
           const [k, e, o, u, s] = await Promise.all([
             getKPIData(opticaId),
@@ -106,7 +106,7 @@ export default function DashboardHome() {
   const estadoPago = getEstadoPago();
   const IconoEstado = estadoPago.icono;
   const montoPlan = optica.plan === "premium" ? (optica.billingCycle === "yearly" ? "$1,990" : "$199") : optica.plan === "premium_plus" ? (optica.billingCycle === "yearly" ? "$5,391" : "$599") : "$0";
-  
+
   const hora = new Date().getHours();
   const saludo = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
 
@@ -161,15 +161,15 @@ export default function DashboardHome() {
               <Link href={`/dashboard/${opticaId}/disenar-ficha`} className="text-xs text-navy-700 hover:underline font-medium">Necesito ayuda</Link>
             </div>
             <div className="flex items-center gap-4 mb-4">
-              <DonutChart 
+              <DonutChart
                 segmentos={[
-                  { valor: estadoFicha.excelente, color: "#00a650", etiqueta: "Excelente" }, 
-                  { valor: estadoFicha.bueno, color: "#fff159", etiqueta: "Bueno" }, 
+                  { valor: estadoFicha.excelente, color: "#00a650", etiqueta: "Excelente" },
+                  { valor: estadoFicha.bueno, color: "#fff159", etiqueta: "Bueno" },
                   { valor: estadoFicha.porMejorar, color: "#ff4444", etiqueta: "Por mejorar" }
-                ]} 
-                tamano={120} 
-                grosor={18} 
-                centroTexto={`${kpi?.relevanciaScore || 0}`} 
+                ]}
+                tamano={120}
+                grosor={18}
+                centroTexto={`${kpi?.relevanciaScore || 0}`}
               />
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between text-xs">
