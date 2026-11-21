@@ -24,6 +24,7 @@ import { auth } from "@/lib/firebase"; // ✅ Solo necesitamos auth, el resto va
 import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import { useConfig } from "@/hooks/useConfig";
+import { auth, db } from "@/lib/firebase"; 
 
 interface FormData {
   nombre: string;
@@ -56,6 +57,8 @@ export default function WizardRegistro() {
   const [pasoActual, setPasoActual] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [formData, setFormData] = useState<FormData>({
+  const [planUsuarioActual, setPlanUsuarioActual] = useState<string | null>(null);
+  const [cargandoPlan, setCargandoPlan] = useState(true);
     nombre: "",
     direccion: "",
     ciudad: "",
@@ -90,6 +93,36 @@ export default function WizardRegistro() {
   const totalPasos = 5;
   const router = useRouter();
   const [publicando, setPublicando] = useState(false);
+
+  const [publicando, setPublicando] = useState(false);
+
+  // ✅ NUEVO: Consultar el plan actual del usuario al montar el componente
+  useEffect(() => {
+    const obtenerPlanUsuario = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          const opticasSnapshot = await db.collection("opticas").where("uid", "==", currentUser.uid).get();
+          if (!opticasSnapshot.empty) {
+            // Tomamos el plan de la primera óptica encontrada (asumimos que la suscripción es por usuario)
+            const primeraOptica = opticasSnapshot.docs[0].data();
+            setPlanUsuarioActual(primeraOptica.plan || "free");
+          } else {
+            setPlanUsuarioActual("free");
+          }
+        } catch (error) {
+          console.error("Error al obtener plan del usuario:", error);
+          setPlanUsuarioActual("free");
+        }
+      } else {
+        setPlanUsuarioActual("free");
+      }
+      setCargandoPlan(false);
+    };
+    obtenerPlanUsuario();
+  }, []);
+
+  // ... (el resto de tus funciones toggleEspecialidad, toggleSeguro, etc. se mantienen igual) ...
 
   const { data: especialidadesData, loading: loadingEspecialidades, error: errorEspecialidades } = useConfig("especialidades");
   const especialidadesDisponibles = especialidadesData?.items || [];
@@ -840,12 +873,39 @@ export default function WizardRegistro() {
                       <h3 className="text-sm font-semibold text-gray-700 mb-3">
                         Plan seleccionado
                       </h3>
-                      {loadingPlanes ? (
+                      
+                      {cargandoPlan ? (
                         <div className="text-center py-8">
                           <Loader2 className="w-8 h-8 border-4 border-navy-200 border-t-navy-700 rounded-full animate-spin mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">Cargando planes...</p>
+                          <p className="text-sm text-gray-500">Verificando tu suscripción actual...</p>
+                        </div>
+                      ) : planUsuarioActual === "premium" || planUsuarioActual === "premium_plus" ? (
+                        // ✅ CASO C2: El usuario ya tiene un plan de pago. Mostramos solo ese plan, bloqueado.
+                        <div className="p-5 rounded-[var(--radius-premium)] border-2 border-navy-900 bg-navy-50 shadow-lg opacity-75 cursor-not-allowed">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              {planUsuarioActual === "premium_plus" ? (
+                                <Crown className="w-5 h-5 text-gold-700" />
+                              ) : (
+                                <Star className="w-5 h-5 text-navy-700" />
+                              )}
+                              <h4 className="font-bold text-navy-900 text-lg">
+                                {planUsuarioActual === "premium_plus" ? "Premium+" : "Premium"}
+                              </h4>
+                            </div>
+                            <span className="bg-navy-900 text-white text-xs px-2 py-1 rounded-full">Tu plan actual</span>
+                          </div>
+                          <div className="mb-4">
+                            <p className="text-2xl font-bold text-navy-900">
+                              {formData.billingCycle === "monthly" ? `$${precioPlanMensual}/mes` : `$${precioPlanAnual}/año`}
+                            </p>
+                          </div>
+                          <p className="text-sm text-amber-700 font-medium bg-amber-50 p-3 rounded-lg border border-amber-200">
+                            ⚠️ Estás agregando una nueva óptica a tu suscripción existente. Se realizará un nuevo cobro por esta ficha.
+                          </p>
                         </div>
                       ) : (
+                        // ✅ CASO FREE: El usuario puede elegir libremente entre Free, Premium o Premium+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {planesDisponibles.map((p) => {
                             const Icono = p.icono === "Crown" ? Crown : p.icono === "Star" ? Star : MapPin;
