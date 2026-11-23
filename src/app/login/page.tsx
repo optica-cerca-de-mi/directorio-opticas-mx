@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { esSuperAdmin } from "@/lib/roles";
 import { Loader2, Eye, EyeOff, Mail, Lock, User, Store } from "lucide-react";
 import Link from "next/link";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const [modo, setModo] = useState<"login" | "registro">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,17 +35,30 @@ function LoginContent() {
 
     setCargando(true);
     try {
+      // Email confirmado por Firebase tras la autenticación.
+      // Se usa como única fuente de verdad para decidir el destino.
+      let emailSesion: string | null = null;
+
       if (modo === "login") {
-        await signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        emailSesion = cred.user.email;
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: nombre });
-        await setDoc(doc(db, "usuarios", userCredential.user.uid), {
-          email, nombre, fechaRegistro: new Date().toISOString(),
-          aceptaTerminos: true, fechaAceptacionTerminos: new Date().toISOString(),
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(cred.user, { displayName: nombre });
+        await setDoc(doc(db, "usuarios", cred.user.uid), {
+          email,
+          nombre,
+          fechaRegistro: new Date().toISOString(),
+          aceptaTerminos: true,
+          fechaAceptacionTerminos: new Date().toISOString(),
         });
+        emailSesion = cred.user.email;
       }
-      router.push(redirect);
+
+      // Si es super administrador y el destino por defecto es el panel de ópticas,
+      // lo elevamos al panel de administración. Un redirect explícito se respeta.
+      const destino = esSuperAdmin(emailSesion) && redirect === "/dashboard" ? "/admin" : redirect;
+      router.push(destino);
     } catch (err: any) {
       setError(err.message || "Error en la autenticación");
     } finally {
@@ -116,9 +130,9 @@ function LoginContent() {
             {cargando ? <Loader2 className="w-5 h-5 animate-spin" /> : (modo === "login" ? "Iniciar sesión" : "Crear cuenta")}
           </button>
 
-          {/* ✅ BOTÓN AZUL PROMINENTE: VER PLANES */}
-          <Link 
-            href="/registro" 
+          {/* Botón azul prominente: ver planes */}
+          <Link
+            href="/registro"
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 mt-3 shadow-md border border-blue-500"
           >
             <Store className="w-5 h-5" />
