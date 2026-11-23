@@ -59,10 +59,10 @@ export default function DashboardPage() {
 
         setOpticas(opticasData);
 
-        // Si solo tiene una óptica, redirigir automáticamente a su dashboard específico
-        if (opticasData.length === 1) {
-          router.push(`/dashboard/${opticasData[0].id}`);
-        }
+        // ✅ ELIMINADO: La redirección automática cuando hay 1 óptica.
+        // Ahora el usuario siempre ve la lista y puede hacer clic en "Agregar óptica"
+        // para crear una nueva sucursal y probar la regla C2.
+
       } catch (error) {
         console.error("Error al cargar ópticas:", error);
       } finally {
@@ -83,18 +83,18 @@ export default function DashboardPage() {
 
   if (!usuario) return null;
 
-  // ✅ LÓGICA DE ENRUTAMIENTO INTELIGENTE
+  // ✅ LÓGICA DE ENRUTAMIENTO INTELIGENTE PARA EL BOTÓN "AGREGAR"
   const obtenerPlanParaNuevaOptica = () => {
     if (opticas.length === 0) return "free";
-    
+
     const tienePremiumPlus = opticas.some(o => o.plan === "premium_plus");
     const tienePremium = opticas.some(o => o.plan === "premium");
-    
+
     if (tienePremiumPlus) return "premium_plus";
     if (tienePremium) return "premium";
-    
+
     // Si es Free y ya tiene 1 óptica, debe hacer upgrade a Premium para agregar otra
-    return "premium"; 
+    return "premium";
   };
 
   const planDestino = obtenerPlanParaNuevaOptica();
@@ -153,7 +153,7 @@ export default function DashboardPage() {
               );
             })}
 
-            {/* ✅ BOTÓN PARA AGREGAR NUEVA SUCURSAL (Redirige al wizard con el plan correcto) */}
+            {/* ✅ BOTÓN PARA AGREGAR NUEVA SUCURSAL */}
             <Link
               href={hrefDestino}
               className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center hover:border-navy-500 hover:bg-navy-50 transition-all min-h-[200px]"
