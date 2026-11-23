@@ -100,15 +100,15 @@ function BannerPropio() {
             <div>
               <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">Publicidad</p>
               <h3 className="text-xl md:text-2xl font-bold text-navy-900 mb-2 font-display">
-                Eres proveedor de lentes o armazones?
+                ¿Eres proveedor de lentes o armazones?
               </h3>
               <p className="text-sm text-gray-700 max-w-xl">
-                Llega a miles de opticas en todo Mexico. Anunciate en el directorio lider del sector optico y aumenta tus ventas.
+                Llega a miles de ópticas en todo México. Anúnciate en el directorio líder del sector óptico y aumenta tus ventas.
               </p>
             </div>
           </div>
           <Link href="/contacto-publicidad" className="px-6 py-3 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors flex-shrink-0 shadow-lg hover:shadow-xl flex items-center gap-2">
-            Conoce mas <ArrowRight className="w-4 h-4" />
+            Conoce más <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
@@ -120,7 +120,7 @@ function BannerPropio() {
 // DATOS MAESTROS
 // ═══════════════════════════════════════════════════════════════
 const ESPECIALIDADES = [
-  { nombre: "Optometria General", icono: Star, slug: "optometria" },
+  { nombre: "Optometría General", icono: Star, slug: "optometria" },
   { nombre: "Lentes de Contacto", icono: Contact, slug: "contactologia" },
   { nombre: "Lentes Progresivos", icono: Glasses, slug: "progresivos" },
   { nombre: "Lentes Antiblue", icono: Sun, slug: "antiblue" },
@@ -129,9 +129,9 @@ const ESPECIALIDADES = [
 ];
 
 const SUGERENCIAS_RAPIDAS = [
-  "Me empeoro la vista, necesito examen",
+  "Me empeoró la vista, necesito examen",
   "Lentes de contacto en CDMX",
-  "Optica que acepte GNP",
+  "Óptica que acepte GNP",
   "Lentes para computadora",
 ];
 
@@ -196,7 +196,7 @@ export default function HomePage() {
 
   const badgesHumanos = [
     {
-      titulo: "La mas recomendada", subtitulo: "Elegida por nuestra comunidad",
+      titulo: "La más recomendada", subtitulo: "Elegida por nuestra comunidad",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -209,7 +209,7 @@ export default function HomePage() {
       icono: Award, color: "from-amber-500 to-amber-600", bgColor: "bg-amber-50", textColor: "text-amber-900", borderColor: "border-amber-200",
     },
     {
-      titulo: "Calificacion perfecta", subtitulo: "Excelencia comprobada",
+      titulo: "Calificación perfecta", subtitulo: "Excelencia comprobada",
       razon: (o: OpticaTop) => {
         const razones = [];
         if (o.calificacionGoogle) razones.push(`${o.calificacionGoogle}★`);
@@ -236,18 +236,18 @@ export default function HomePage() {
   ];
 
   const beneficios = [
-    { icono: Star, titulo: "Encuentra rapido", descripcion: "Busca opticas por ciudad, especialidad o seguro medico en segundos." },
-    { icono: Star, titulo: "Resenas reales", descripcion: "Opiniones verificadas de pacientes reales para tomar la mejor decision." },
-    { icono: MapPin, titulo: "Cerca de ti", descripcion: "Geolocalizacion inteligente para encontrar las opticas mas cercanas." },
-    { icono: ShieldCheck, titulo: "Opticas verificadas", descripcion: "Todas las opticas premium estan verificadas y actualizadas." },
-    { icono: ChevronRight, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una optica esta abierta ahora mismo." },
+    { icono: Star, titulo: "Encuentra rápido", descripcion: "Busca ópticas por ciudad, especialidad o seguro médico en segundos." },
+    { icono: Star, titulo: "Reseñas reales", descripcion: "Opiniones verificadas de pacientes reales para tomar la mejor decisión." },
+    { icono: MapPin, titulo: "Cerca de ti", descripcion: "Geolocalización inteligente para encontrar las ópticas más cercanas." },
+    { icono: ShieldCheck, titulo: "Ópticas verificadas", descripcion: "Todas las ópticas premium están verificadas y actualizadas." },
+    { icono: ChevronRight, titulo: "Horarios en vivo", descripcion: "Sabe al instante si una óptica está abierta ahora mismo." },
     { icono: Star, titulo: "Contacto directo", descripcion: "WhatsApp, llamada o Waze con un solo clic." },
   ];
 
   const razonesRecomendacion = [
-    { icono: Target, titulo: "Ranking inteligente", descripcion: "Nuestro algoritmo OptiRank analiza calificacion, ubicacion, horarios y completitud de ficha para recomendarte las mejores opciones." },
-    { icono: Target, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificacion o exploracion, y ajustamos el orden segun lo que mas te importa." },
-    { icono: Star, titulo: "Transparencia total", descripcion: "Mostramos resenas reales de Google, horarios actualizados y toda la informacion que necesitas sin sorpresas." },
+    { icono: Target, titulo: "Ranking inteligente", descripcion: "Nuestro algoritmo OptiRank analiza calificación, ubicación, horarios y completitud de ficha para recomendarte las mejores opciones." },
+    { icono: Target, titulo: "Basado en tu perfil", descripcion: "Detectamos si buscas urgencia, planificación o exploración, y ajustamos el orden según lo que más te importa." },
+    { icono: Star, titulo: "Transparencia total", descripcion: "Mostramos reseñas reales de Google, horarios actualizados y toda la información que necesitas sin sorpresas." },
   ];
 
   if (loading) {
@@ -276,10 +276,10 @@ export default function HomePage() {
       <section className="relative bg-gradient-to-br from-navy-900 via-navy-800 to-navy-900 text-white overflow-hidden pt-20 pb-20 md:pt-28 md:pb-28">
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-6xl font-bold font-display mb-4 leading-tight">
-            Encuentra la atencion que necesitas
+            Encuentra la atención que necesitas
           </h1>
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
-            Describe que te pasa o a quien buscas, y te ayudaremos a encontrar la optica perfecta.
+            Describe qué te pasa o a quién buscas, y te ayudaremos a encontrar la óptica perfecta.
           </p>
 
           {/* ✅ MÓDULO FRANKLIN AISLADO */}
@@ -293,7 +293,7 @@ export default function HomePage() {
           <div className="grid grid-cols-3 gap-4 md:gap-8 mt-12 max-w-2xl mx-auto">
             <div className="text-center">
               <AnimatedCounter end={stats.totalOpticas} />
-              <div className="text-sm text-gray-400 mt-1">Opticas registradas</div>
+              <div className="text-sm text-gray-400 mt-1">Ópticas registradas</div>
             </div>
             <div className="text-center">
               <AnimatedCounter end={stats.totalCiudades} />
@@ -317,7 +317,7 @@ export default function HomePage() {
               Encuentra Especialistas en Salud Visual
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Navega por especialidades y encuentra la optica perfecta para tus necesidades especificas.
+              Navega por especialidades y encuentra la óptica perfecta para tus necesidades específicas.
             </p>
           </div>
 
@@ -354,11 +354,11 @@ export default function HomePage() {
               <span className="text-sm font-semibold">Top 3 Recomendadas</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">
-              Opticas Mejor Valoradas por OptiRank
+              Ópticas Mejor Valoradas por OptiRank
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Seleccionadas por nuestro algoritmo OptiRank basado en calificacion, ubicacion,
-              horarios y completitud de informacion.
+              Seleccionadas por nuestro algoritmo OptiRank basado en calificación, ubicación,
+              horarios y completitud de información.
             </p>
           </div>
 
@@ -461,7 +461,7 @@ export default function HomePage() {
 
           <div className="text-center mt-12">
             <Link href="/opticas" className="inline-flex items-center gap-2 px-8 py-4 bg-navy-900 hover:bg-navy-800 text-white font-semibold rounded-lg transition-colors shadow-lg">
-              Ver todas las opticas <ArrowRight className="w-5 h-5" />
+              Ver todas las ópticas <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
@@ -476,7 +476,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Todo lo que necesitas en un solo lugar</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la optica ideal sin complicaciones.</p>
+            <p className="text-gray-600 max-w-2xl mx-auto">Herramientas poderosas para encontrar la óptica ideal sin complicaciones.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -497,18 +497,18 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════
-          POR QUE LAS RECOMENDAMOS
+          POR QUÉ LAS RECOMENDAMOS
       ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-navy-100 text-navy-800 rounded-full mb-4">
               <Zap className="w-4 h-4" />
-              <span className="text-sm font-semibold">Tecnologia OptiRank</span>
+              <span className="text-sm font-semibold">Tecnología OptiRank</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">Por que las recomendamos</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 font-display mb-4">¿Por qué las recomendamos?</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Nuestro sistema de ranking inteligente analiza multiples factores para mostrarte las mejores opciones segun lo que buscas.
+              Nuestro sistema de ranking inteligente analiza múltiples factores para mostrarte las mejores opciones según lo que buscas.
             </p>
           </div>
 
@@ -543,7 +543,7 @@ export default function HomePage() {
               Planes flexibles y Multi-Sucursales
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              Desde una unica optica hasta cadenas corporativas. Tenemos la solucion perfecta para escalar tu visibilidad.
+              Desde una única óptica hasta cadenas corporativas. Tenemos la solución perfecta para escalar tu visibilidad.
             </p>
           </div>
 
@@ -554,7 +554,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-navy-900 mb-2">Plan Free</h3>
               <p className="text-3xl font-bold text-navy-900 mb-2">$0</p>
-              <p className="text-sm text-gray-600">1 sucursal maxima. Presencia basica garantizada.</p>
+              <p className="text-sm text-gray-600">1 sucursal máxima. Presencia básica garantizada.</p>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border-2 border-navy-900 shadow-lg text-center relative overflow-hidden">
@@ -564,7 +564,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold text-navy-900 mb-2">Premium / Premium+</h3>
               <p className="text-3xl font-bold text-navy-900 mb-2">Hasta 3</p>
-              <p className="text-sm text-gray-600">Sucursales maximas. Maxima visibilidad y herramientas de gestion.</p>
+              <p className="text-sm text-gray-600">Sucursales máximas. Máxima visibilidad y herramientas de gestión.</p>
             </div>
 
             <div className="bg-navy-900 p-6 rounded-2xl border border-navy-800 shadow-lg text-center text-white">
@@ -573,7 +573,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-bold mb-2">Corporativo</h3>
               <p className="text-3xl font-bold text-gold-400 mb-2">4+ Sucursales</p>
-              <p className="text-sm text-navy-200">Tarifas preferenciales, facturacion consolidada y gestor dedicado.</p>
+              <p className="text-sm text-navy-200">Tarifas preferenciales, facturación consolidada y gestor dedicado.</p>
             </div>
           </div>
 
@@ -597,13 +597,13 @@ export default function HomePage() {
       ═══════════════════════════════════════════════════════════ */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-navy-900 to-navy-800 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">Tienes una optica?</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-display mb-4">¿Tienes una óptica?</h2>
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Unete al directorio mas completo de opticas en Mexico. Aumenta tu visibilidad y atrae mas clientes.
+            Únete al directorio más completo de ópticas en México. Aumenta tu visibilidad y atrae más clientes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/registro" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gold-500 hover:bg-gold-400 text-navy-900 font-bold rounded-lg transition-all shadow-lg">
-              <Sparkles className="w-5 h-5" /> Registra tu optica gratis
+              <Sparkles className="w-5 h-5" /> Registra tu óptica gratis
             </Link>
             <Link href="/opticas" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white font-semibold rounded-lg transition-all border border-white/20">
               Explorar directorio <ArrowRight className="w-5 h-5" />
