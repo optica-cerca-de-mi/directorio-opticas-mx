@@ -7,24 +7,34 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredUid?: string;
   requiredEmail?: string;
 }
 
-export default function ProtectedRoute({ children, requiredEmail }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, requiredUid, requiredEmail }: ProtectedRouteProps) {
   const { usuario, cargando } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!cargando) {
-      if (!usuario) {
-        router.replace("/login");
-      } else if (requiredEmail && usuario.email?.toLowerCase() !== requiredEmail.toLowerCase()) {
-        router.replace("/dashboard");
-      }
-    }
-  }, [usuario, cargando, router, requiredEmail]);
+  // Determina si el usuario autenticado es el dueño.
+  // Prioridad: uid (identidad estable) sobre email (puede divergir por Stripe).
+  const esDueño = (() => {
+    if (!usuario) return false;
+    if (requiredUid) return usuario.uid === requiredUid;
+    if (requiredEmail) return usuario.email?.toLowerCase() === requiredEmail.toLowerCase();
+    return true;
+  })();
 
-  // 1. Mientras carga o no hay usuario, mostramos el loader.
+  useEffect(() => {
+    if (cargando) return;
+    if (!usuario) {
+      router.replace("/login");
+    } else if (!esDueño) {
+      router.replace("/dashboard");
+    }
+  }, [usuario, cargando, esDueño, router]);
+
+  // Mientras carga, no hay sesión o no es el dueño, mostramos un loader.
+  // Nunca renderizamos los hijos antes de confirmar la autoría, para evitar el flash.
   if (cargando || !usuario) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -36,9 +46,7 @@ export default function ProtectedRoute({ children, requiredEmail }: ProtectedRou
     );
   }
 
-  // 2. Si hay un email requerido y no coincide, también mostramos loader mientras redirige.
-  // Esto evita el "flash" del contenido del dashboard antes de la expulsión.
-  if (requiredEmail && usuario.email?.toLowerCase() !== requiredEmail.toLowerCase()) {
+  if (!esDueño) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -49,6 +57,5 @@ export default function ProtectedRoute({ children, requiredEmail }: ProtectedRou
     );
   }
 
-  // 3. Si todo está correcto, renderizamos el contenido.
   return <>{children}</>;
 }

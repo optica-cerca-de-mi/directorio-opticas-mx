@@ -139,7 +139,7 @@ export default function DashboardLayout({
   // 3. Renderizado principal del Dashboard
   return (
     <DesktopOnlyWrapper>
-      <ProtectedRoute requiredEmail={optica.email}>
+            <ProtectedRoute requiredUid={optica.uid}>
         <div className="min-h-screen bg-gray-50 flex">
           {/* Sidebar */}
           <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full overflow-y-auto z-10">
