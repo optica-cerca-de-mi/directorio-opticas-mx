@@ -21,8 +21,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useRouter, useParams } from "next/navigation";
 import { useConfig } from "@/hooks/useConfig";
+import { useAuth } from "@/lib/auth-context";
 
 interface FormData {
   nombre: string;
@@ -50,13 +52,15 @@ interface FormData {
 
 export default function WizardRegistro() {
   const params = useParams();
+  const router = useRouter();
+  const { usuario } = useAuth();
+
   const planInicial = (params.plan as string) || "free";
 
   const [pasoActual, setPasoActual] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [publicando, setPublicando] = useState(false);
   
-  // ✅ Estados de control del plan del usuario (fuera de formData)
   const [planUsuarioActual, setPlanUsuarioActual] = useState<string | null>(null);
   const [cargandoPlan, setCargandoPlan] = useState(true);
   
@@ -93,32 +97,40 @@ export default function WizardRegistro() {
   });
 
   const totalPasos = 5;
-  const router = useRouter();
 
-  // ✅ Consultar el plan actual del usuario al montar el componente
+  // ✅ Consulta del plan actual del usuario (API modular, consistente con el dashboard)
   useEffect(() => {
     const obtenerPlanUsuario = async () => {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        try {
-          const opticasSnapshot = await db.collection("opticas").where("uid", "==", currentUser.uid).get();
-          if (!opticasSnapshot.empty) {
-            const primeraOptica = opticasSnapshot.docs[0].data();
-            setPlanUsuarioActual(primeraOptica.plan || "free");
-          } else {
-            setPlanUsuarioActual("free");
+      if (!usuario) {
+        setPlanUsuarioActual("free");
+        setCargandoPlan(false);
+        return;
+      }
+      try {
+        const q = query(
+          collection(db, "opticas"),
+          where("uid", "==", usuario.uid)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const planDetectado = snapshot.docs[0].data().plan || "free";
+          setPlanUsuarioActual(planDetectado);
+          // Fuerza el plan heredado para que el cobro y los precios coincidan con la suscripción real
+          if (planDetectado === "premium" || planDetectado === "premium_plus") {
+            setFormData((prev) => ({ ...prev, planSeleccionado: planDetectado }));
           }
-        } catch (error) {
-          console.error("Error al obtener plan del usuario:", error);
+        } else {
           setPlanUsuarioActual("free");
         }
-      } else {
+      } catch (error) {
+        console.error("Error al obtener plan del usuario:", error);
         setPlanUsuarioActual("free");
+      } finally {
+        setCargandoPlan(false);
       }
-      setCargandoPlan(false);
     };
     obtenerPlanUsuario();
-  }, []);
+  }, [usuario]);
 
   const { data: especialidadesData, loading: loadingEspecialidades, error: errorEspecialidades } = useConfig("especialidades");
   const especialidadesDisponibles = especialidadesData?.items || [];
