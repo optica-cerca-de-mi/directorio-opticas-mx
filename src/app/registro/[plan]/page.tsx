@@ -56,10 +56,10 @@ export default function WizardRegistro() {
   const [isDragging, setIsDragging] = useState(false);
   const [publicando, setPublicando] = useState(false);
   
-  // ✅ Estados para manejar el plan actual del usuario
+  // ✅ Estados de control del plan del usuario (fuera de formData)
   const [planUsuarioActual, setPlanUsuarioActual] = useState<string | null>(null);
   const [cargandoPlan, setCargandoPlan] = useState(true);
-
+  
   const [formData, setFormData] = useState<FormData>({
     nombre: "",
     direccion: "",
@@ -95,7 +95,7 @@ export default function WizardRegistro() {
   const totalPasos = 5;
   const router = useRouter();
 
-  // ✅ NUEVO: Consultar el plan actual del usuario al montar el componente
+  // ✅ Consultar el plan actual del usuario al montar el componente
   useEffect(() => {
     const obtenerPlanUsuario = async () => {
       const currentUser = auth.currentUser;
@@ -262,6 +262,7 @@ export default function WizardRegistro() {
     try {
       const idToken = await currentUser.getIdToken();
 
+      // Paso A: crear la óptica
       const respuesta = await fetch("/api/crear-optica", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -281,6 +282,7 @@ export default function WizardRegistro() {
 
       const opticaId = datos.opticaId;
 
+      // Paso B: si requiere pago, lanzar el checkout de Stripe
       if (datos.requierePago) {
         const checkoutResp = await fetch("/api/checkout/stripe", {
           method: "POST",
@@ -310,6 +312,7 @@ export default function WizardRegistro() {
         }
       }
 
+      // Paso C: plan Free, directo al dashboard
       router.push(`/dashboard/${opticaId}`);
 
     } catch (error: any) {
@@ -631,6 +634,7 @@ export default function WizardRegistro() {
                   <p className="text-sm text-gray-600 mb-6">Selecciona tu plan y método de facturación.</p>
 
                   <div className="space-y-6">
+                    {/* Selector de plan */}
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 mb-3">Plan seleccionado</h3>
                       
@@ -640,6 +644,7 @@ export default function WizardRegistro() {
                           <p className="text-sm text-gray-500">Verificando tu suscripción actual...</p>
                         </div>
                       ) : planUsuarioActual === "premium" || planUsuarioActual === "premium_plus" ? (
+                        // ✅ CASO C2: El usuario ya tiene un plan de pago. Mostramos solo ese plan, bloqueado.
                         <div className="p-5 rounded-[var(--radius-premium)] border-2 border-navy-900 bg-navy-50 shadow-lg opacity-75 cursor-not-allowed">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-2">
@@ -664,6 +669,7 @@ export default function WizardRegistro() {
                           </p>
                         </div>
                       ) : (
+                        // ✅ CASO FREE: El usuario puede elegir libremente entre Free, Premium o Premium+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {planesDisponibles.map((p) => {
                             const Icono = p.icono === "Crown" ? Crown : p.icono === "Star" ? Star : MapPin;
